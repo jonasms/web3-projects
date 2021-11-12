@@ -1,7 +1,9 @@
+import { ethers } from "hardhat";
+
 async function main() {
-  const Campaign = await ethers.getContractFactory("Factory");
+  const Campaign = await ethers.getContractFactory("Campaign");
   console.log("Deploying Campaign");
-  const campaign = await Campaign.deploy();
+  const campaign = await Campaign.deploy("Test Campaign", ethers.utils.parseEther("5"));
   console.log("Campaign deployed to: ", campaign.address);
 }
 
