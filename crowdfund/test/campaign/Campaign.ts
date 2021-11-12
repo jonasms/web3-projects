@@ -3,7 +3,7 @@ import type { Artifact } from "hardhat/types";
 import type { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
 
 import type { Campaign } from "../../src/types/Campaign";
-// import type {Factory} from "../../src/types/Factory";
+import type {Factory} from "../../src/types/Factory";
 import { Signers } from "../types";
 import { expect } from "chai";
 
@@ -19,7 +19,23 @@ describe("Unit tests", function () {
     this.account2 = account2;
   });
 
-  // TODO test factory
+  describe("Factory", function () {
+    beforeEach(async function () {
+        const factoryArtifact: Artifact = await artifacts.readArtifact("Factory");
+        this.factory = <Factory>await waffle.deployContract(this.account1, factoryArtifact);
+    });
+
+    it("Should create a Campaign contract", async function() {
+        await this.factory.createCampaign("Test Campaign", parseEther("10"));
+        const _Campaign = await ethers.getContractFactory("Campaign");
+        const campaignAddress = await this.factory.getCampaign(0);
+        const campaign = _Campaign.attach(campaignAddress);
+
+        expect(campaign.address).to.equal(campaignAddress);
+        expect(await campaign.campaignName()).to.equal("Test Campaign");
+        expect(await campaign.goal()).to.equal(parseEther("10"));
+    })
+  });
 
   describe("Campaign", function () {
     beforeEach(async function () {
