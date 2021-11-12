@@ -56,9 +56,8 @@ describe("Unit tests", function () {
     })
 
     it("Should withdraw given amount from contract", async function() {
-        await this.campaign.contribute({ value: parseEther("3") });
-        await this.campaign.contribute({ value: parseEther("4") });
-        await this.campaign.contribute({ value: parseEther("4") });
+        await this.account1.sendTransaction({ to: this.campaign.address, value: parseEther("9") });
+        await this.account1.sendTransaction({ to: this.campaign.address, value: parseEther("2") });
 
         expect(await ethers.provider.getBalance(this.campaign.address)).to.equal(parseEther("11"));
 
@@ -70,49 +69,53 @@ describe("Unit tests", function () {
 
     it("Should contribute 0.01ETH to contract", async function() {
         expect(await ethers.provider.getBalance(this.campaign.address)).to.equal(parseEther("0"));
-        await this.campaign.contribute({ value: parseEther("0.01") });
+        await this.account1.sendTransaction({
+            to: this.campaign.address,
+            value: parseEther("0.01")
+        });
+        // await this.campaign.contribute({ value: parseEther("0.01") });
         expect(await ethers.provider.getBalance(this.campaign.address)).to.equal(parseEther("0.01"));
         expect(await this.campaign.getContributor(this.account1.address)).to.equal(parseEther("0.01"))
     });
 
     it("Should contribute over goal", async function() {
-        await this.campaign.contribute({ value: parseEther("3") });
-        await this.campaign.contribute({ value: parseEther("4") });
-        await this.campaign.contribute({ value: parseEther("4") });
+        await this.account1.sendTransaction({ to: this.campaign.address, value: parseEther("3")});
+        await this.account1.sendTransaction({ to: this.campaign.address, value: parseEther("4")});
+        await this.account1.sendTransaction({ to: this.campaign.address, value: parseEther("4")});
 
         expect(await ethers.provider.getBalance(this.campaign.address)).to.equal(parseEther("11"));
     });
 
     it("Should not contribute over goal", async function() {
-        await this.campaign.contribute({ value: parseEther("3") });
-        await this.campaign.contribute({ value: parseEther("4") });
-        await this.campaign.contribute({ value: parseEther("3") });
-        await expect(this.campaign.contribute({ value: parseEther("1") })).to.be.reverted;
+        await this.account1.sendTransaction({ to: this.campaign.address, value: parseEther("3")});
+        await this.account1.sendTransaction({ to: this.campaign.address, value: parseEther("3")});
+        await this.account1.sendTransaction({ to: this.campaign.address, value: parseEther("4")});
+        await expect(this.account1.sendTransaction({ to: this.campaign.address, value: parseEther("0.01")})).to.be.reverted;
 
         expect(await ethers.provider.getBalance(this.campaign.address)).to.equal(parseEther("10"));
     });
 
     it("Should reject the contribution for being too low", async function() {
         expect(await ethers.provider.getBalance(this.campaign.address)).to.equal(parseEther("0"));
-        await expect(this.campaign.contribute({ value: parseEther("0.001") })).to.be.reverted;
+        await expect(this.account1.sendTransaction({ to: this.campaign.address, value: parseEther("0.001")})).to.be.reverted;
         expect(await ethers.provider.getBalance(this.campaign.address)).to.equal(parseEther("0"));
         expect(await this.campaign.getContributor(this.account1.address)).to.equal(parseEther("0"))
     });
 
     it("Should not contribute when campaign is canceled", async function() {
         await this.campaign.cancel();
-        await expect(this.campaign.contribute({ value: parseEther("1") })).to.be.reverted;
+        await expect(this.account1.sendTransaction({ to: this.campaign.address, value: parseEther("1")})).to.be.reverted;
     });
 
     it("Should award 1 contributor badge", async function() {
         expect(await ethers.provider.getBalance(this.campaign.address)).to.equal(parseEther("0"));
-        await this.campaign.contribute({ value: parseEther("1") });
+        await this.account1.sendTransaction({ to: this.campaign.address, value: parseEther("1")});
         expect(await this.campaign.ownerOf(1)).is.equal(this.account1.address);
     });
 
     it("Should award 3 contributor badges", async function() {
         expect(await ethers.provider.getBalance(this.campaign.address)).to.equal(parseEther("0"));
-        await this.campaign.contribute({ value: parseEther("3.2") });
+        await this.account1.sendTransaction({ to: this.campaign.address, value: parseEther("3.2")});
         expect(await this.campaign.ownerOf(1)).is.equal(this.account1.address);
         expect(await this.campaign.ownerOf(2)).is.equal(this.account1.address);
         expect(await this.campaign.ownerOf(3)).is.equal(this.account1.address);
@@ -120,7 +123,7 @@ describe("Unit tests", function () {
     });
 
     it("Should make an authorized badge transfer", async function() {
-        await this.campaign.contribute({ value: parseEther("1") });
+        await this.account1.sendTransaction({ to: this.campaign.address, value: parseEther("1")});
         expect(await this.campaign.ownerOf(1)).is.equal(this.account1.address);
         await this.campaign.transferFrom(
             this.account1.address,
@@ -131,7 +134,7 @@ describe("Unit tests", function () {
     });
 
     it("Should not make an unauthorized badge transfer", async function() {
-        await this.campaign.contribute({ value: parseEther("1") });
+        await this.account1.sendTransaction({ to: this.campaign.address, value: parseEther("1")});
         expect(await this.campaign.ownerOf(1)).is.equal(this.account1.address);
         await expect(this.campaign.connect(this.account2).transferFrom(
             this.account1.address,

@@ -43,7 +43,18 @@ contract Campaign is Ownable, Helper, ContributorBadge {
         require(success, "Transaction failed");
     }
 
-    function contribute() external payable {
+    function refund() external payable {
+        require(canceled || getDaysSince(createdAt) > 30, "This campaign is not eligible for refunds");
+        require(contributors[msg.sender] > 0, "You don't have any funds to be refunded");
+
+        uint256 amountToRefund = contributors[msg.sender];
+        contributors[msg.sender] = 0;
+        (bool success, ) = msg.sender.call{ value: amountToRefund }("");
+        require(success, "Transaction failed");
+        // TODO Refund event
+    }
+
+    receive() external payable {
         require(!goalMet && !canceled && getDaysSince(createdAt) <= 30, "This campaign is no longer active");
         require(msg.value >= 0.01 ether, "Need to contribute at least 0.01ETH");
 
@@ -58,16 +69,5 @@ contract Campaign is Ownable, Helper, ContributorBadge {
             mintToken(msg.sender);
             i = i - 1 ether;
         }
-    }
-
-    function refund() external payable {
-        require(canceled || getDaysSince(createdAt) > 30, "This campaign is not eligible for refunds");
-        require(contributors[msg.sender] > 0, "You don't have any funds to be refunded");
-
-        uint256 amountToRefund = contributors[msg.sender];
-        contributors[msg.sender] = 0;
-        (bool success, ) = msg.sender.call{ value: amountToRefund }("");
-        require(success, "Transaction failed");
-        // TODO Refund event
     }
 }
