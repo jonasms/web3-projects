@@ -10,7 +10,7 @@ contract ContributorBadge is ERC721 {
 
     constructor() ERC721("Contributor Badge", "CB") {}
 
-    function awardItem(address _contributor) public returns (uint256) {
+    function mintToken(address _contributor) internal returns (uint256) {
         _tokenIds.increment();
 
         uint256 newItemId = _tokenIds.current();
