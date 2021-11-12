@@ -59,5 +59,7 @@ describe("Unit tests", function () {
     // TODO test contribution breaks when goal is met
     // TODO test contribution breaks when campaign is canceled
     // TODO test contribution breaks when made more than 30 days after creation
+
+    // TODO test refund
   });
 });

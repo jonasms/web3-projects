@@ -42,4 +42,15 @@ contract Campaign is Ownable, Helper {
         contributors[msg.sender] += msg.value; // TODO scrutinize for vulnerability
         // TODO handle transfering NFT to contributer
     }
+
+    function refund() external payable {
+        require(canceled || getDaysSince(createdAt) > 30, "This campaign is not eligible for refunds");
+        require(contributors[msg.sender] > 0, "You don't have any funds to be refunded");
+
+        uint256 amountToRefund = contributors[msg.sender];
+        contributors[msg.sender] = 0;
+        (bool success, ) = msg.sender.call{ value: amountToRefund }("");
+        require(success, "Transaction failed");
+        // TODO Refund event
+    }
 }
