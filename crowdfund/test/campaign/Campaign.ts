@@ -99,6 +99,11 @@ describe("Unit tests", function () {
         expect(await this.campaign.getContributor(this.account1.address)).to.equal(parseEther("0"))
     });
 
+    it("Should not contribute when campaign is canceled", async function() {
+        await this.campaign.cancel();
+        await expect(this.campaign.contribute({ value: parseEther("1") })).to.be.reverted;
+    });
+
     it("Should award 1 contributor badge", async function() {
         expect(await ethers.provider.getBalance(this.campaign.address)).to.equal(parseEther("0"));
         await this.campaign.contribute({ value: parseEther("1") });
@@ -111,11 +116,29 @@ describe("Unit tests", function () {
         expect(await this.campaign.ownerOf(1)).is.equal(this.account1.address);
         expect(await this.campaign.ownerOf(2)).is.equal(this.account1.address);
         expect(await this.campaign.ownerOf(3)).is.equal(this.account1.address);
+        await expect(this.campaign.ownerOf(4)).to.be.reverted;
     });
 
-    it("Should not contribute when campaign is canceled", async function() {
-        await this.campaign.cancel();
-        await expect(this.campaign.contribute({ value: parseEther("1") })).to.be.reverted;
-    })
+    it("Should make an authorized badge transfer", async function() {
+        await this.campaign.contribute({ value: parseEther("1") });
+        expect(await this.campaign.ownerOf(1)).is.equal(this.account1.address);
+        await this.campaign.transferFrom(
+            this.account1.address,
+            this.account2.address,
+            1
+        );
+        expect(await this.campaign.ownerOf(1)).is.equal(this.account2.address);
+    });
+
+    it("Should not make an unauthorized badge transfer", async function() {
+        await this.campaign.contribute({ value: parseEther("1") });
+        expect(await this.campaign.ownerOf(1)).is.equal(this.account1.address);
+        await expect(this.campaign.connect(this.account2).transferFrom(
+            this.account1.address,
+            this.account2.address,
+            1
+        )).to.be.reverted;
+        expect(await this.campaign.ownerOf(1)).is.equal(this.account1.address);
+    });
   });
 });

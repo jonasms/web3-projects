@@ -38,6 +38,7 @@ contract Campaign is Ownable, Helper, ContributorBadge {
     function withdraw(uint256 _amount) external onlyOwner {
         require(!canceled && goalMet, "Requirements to withdraw not met");
         require(_amount <= address(this).balance, "Cannot withdraw more than total value");
+
         (bool success, ) = msg.sender.call{ value: _amount }("");
         require(success, "Transaction failed");
     }
