@@ -1,10 +1,9 @@
 {
-  "name": "@paulrberg/solidity-template",
-  "description": "Template for writing Solidity smart contracts",
+  "name": "@jonassota/crowdfunder",
+  "description": "A contract for crowdfunding campaigns",
   "version": "1.0.0",
   "author": {
-    "name": "Paul Razvan Berg",
-    "url": "https://paulrberg.com"
+    "name": "Jonas Sota"
   },
   "devDependencies": {
     "@codechecks/client": "^0.1.12",
