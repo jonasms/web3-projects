@@ -107,19 +107,22 @@ Architecture
 
 ----------------------------------------------------------------------
 
-Spec Items:
-* "Request/create projects"
-* "People can contribute $ to project"
-* Contributions close once the amount contributed meets or exceeds the goal. The final transaction can exceed the goal.
-* "Owner can *only* withdraw $ once goal is met"
-    - What if contributions > goal?
-        a. Once contributions >= goal, close contributions?
-        b. Allow project owner to close contributions (thus enabling widthawal)?
-* Owner can specify how much $ to withdraw
-* "When someone contributes 1 ETH, they receive a contributor badge NFT"
-    - What if someone contributes less than 1 ETH? Reject tsx.
-    - A non-integer amount of EHT? Reject tsx.
-    - Can people receive more than one 'contribute badge'?
-* People can contribute any amount.
-* People will be awarded an NFT badge per ETH.
-* "Contributor badge NFTs are tradable"
+Design Exercise
+    Contribution Tiers
+        In order to support contribution tiers I would implement the ERC721Metadata extension
+        that enabled associating metadata to an NFT.
+
+        More specifically, I would use the `attributes` metadata property.
+
+        Something like
+        ```
+        ...
+        {
+            "attributes": [
+                {
+                    "trait_type": "ContributionTier",
+                    "value": "Gold"
+                }
+            ]
+        }
+        ```
