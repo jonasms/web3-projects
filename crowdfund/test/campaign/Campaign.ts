@@ -29,7 +29,7 @@ describe("Unit tests", function () {
     });
 
     it("Should have the given name and goal", async function() {
-        expect(await this.campaign.name()).to.equal(this.campaignArgs[0]);
+        expect(await this.campaign.campaignName()).to.equal(this.campaignArgs[0]);
         expect(await this.campaign.goal()).to.equal(this.campaignArgs[1]);
     })
 
@@ -40,26 +40,66 @@ describe("Unit tests", function () {
     })
 
     it("Should withdraw given amount from contract", async function() {
+        await this.campaign.contribute({ value: parseEther("3") });
+        await this.campaign.contribute({ value: parseEther("4") });
+        await this.campaign.contribute({ value: parseEther("4") });
+
+        expect(await ethers.provider.getBalance(this.campaign.address)).to.equal(parseEther("11"));
+
+        await this.campaign.withdraw(parseEther("5"));
+        expect(await ethers.provider.getBalance(this.campaign.address)).to.equal(parseEther("6"));
+        await this.campaign.withdraw(parseEther("6"));
+        expect(await ethers.provider.getBalance(this.campaign.address)).to.equal(parseEther("0"));
     });
 
-    it("Should contribute given amount to contract", async function() {
+    it("Should contribute 0.01ETH to contract", async function() {
         expect(await ethers.provider.getBalance(this.campaign.address)).to.equal(parseEther("0"));
         await this.campaign.contribute({ value: parseEther("0.01") });
         expect(await ethers.provider.getBalance(this.campaign.address)).to.equal(parseEther("0.01"));
         expect(await this.campaign.getContributor(this.account1.address)).to.equal(parseEther("0.01"))
     });
 
-    it("Should reject the contribution for being too lower", async function() {
+    it("Should contribute over goal", async function() {
+        await this.campaign.contribute({ value: parseEther("3") });
+        await this.campaign.contribute({ value: parseEther("4") });
+        await this.campaign.contribute({ value: parseEther("4") });
+
+        expect(await ethers.provider.getBalance(this.campaign.address)).to.equal(parseEther("11"));
+    });
+
+    it("Should not contribute over goal", async function() {
+        await this.campaign.contribute({ value: parseEther("3") });
+        await this.campaign.contribute({ value: parseEther("4") });
+        await this.campaign.contribute({ value: parseEther("3") });
+        await expect(this.campaign.contribute({ value: parseEther("1") })).to.be.reverted;
+
+        expect(await ethers.provider.getBalance(this.campaign.address)).to.equal(parseEther("10"));
+    });
+
+    it("Should reject the contribution for being too low", async function() {
         expect(await ethers.provider.getBalance(this.campaign.address)).to.equal(parseEther("0"));
         await expect(this.campaign.contribute({ value: parseEther("0.001") })).to.be.reverted;
         expect(await ethers.provider.getBalance(this.campaign.address)).to.equal(parseEther("0"));
         expect(await this.campaign.getContributor(this.account1.address)).to.equal(parseEther("0"))
     });
 
-    // TODO test contribution breaks when goal is met
-    // TODO test contribution breaks when campaign is canceled
-    // TODO test contribution breaks when made more than 30 days after creation
+    it("Should award 1 contributor badge", async function() {
+        expect(await ethers.provider.getBalance(this.campaign.address)).to.equal(parseEther("0"));
+        await this.campaign.contribute({ value: parseEther("1") });
+        expect(await this.campaign.ownerOf(1)).is.equal(this.account1.address);
+    });
 
-    // TODO test refund
+    it("Should award 3 contributor badges", async function() {
+        expect(await ethers.provider.getBalance(this.campaign.address)).to.equal(parseEther("0"));
+        await this.campaign.contribute({ value: parseEther("3.2") });
+        expect(await this.campaign.ownerOf(1)).is.equal(this.account1.address);
+        expect(await this.campaign.ownerOf(2)).is.equal(this.account1.address);
+        expect(await this.campaign.ownerOf(3)).is.equal(this.account1.address);
+    });
+
+    it("Should not contribute when campaign is canceled", async function() {
+        await this.campaign.cancel();
+        await expect(this.campaign.contribute({ value: parseEther("1") })).to.be.reverted;
+    })
   });
 });

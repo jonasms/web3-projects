@@ -1,4 +1,4 @@
-import { ethers } from "hardhat";
+require("hardhat");
 
 async function main() {
   const Campaign = await ethers.getContractFactory("Campaign");
