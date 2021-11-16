@@ -29,3 +29,29 @@
 
 
 ### Questions
+
+## Architecture
+    * Whitelist investors
+    * Max contribution limit per phase
+    * enum for current phase
+    * way to advance phase
+    * way to get current phase
+    * track number of tokens someone owns
+    * track ETH raised
+
+    ```
+    enum Phase {
+        Seed,
+        General,
+        Open
+    }
+
+    struct FundingPhase {
+        Phase phase;
+        uint contributionLimit;
+    }
+
+    uint totalRaised;
+    mapping (address => uint) ownerToTokens;
+    address[] whitelistedInvestors = [];
+    ```
