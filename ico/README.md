@@ -59,7 +59,7 @@
     uint private constant TAX_RATE = 0.02;
     address payable private treasuryAddress;
     bool taxEnabled;
-    mapping (Phase => PhaseDetails) phaseToDetails
+    mapping (Phase => PhaseDetails) phaseToDetails;
     Phase public curPhase;
 
     // init phaseToDetails in constructor   
