@@ -33,25 +33,107 @@
 ## Architecture
     * Whitelist investors
     * Max contribution limit per phase
-    * enum for current phase
+    * enum for phases
     * way to advance phase
     * way to get current phase
     * track number of tokens someone owns
     * track ETH raised
 
     ```
+    
     enum Phase {
+        None,
         Seed,
         General,
         Open
     }
 
-    struct FundingPhase {
-        Phase phase;
-        uint contributionLimit;
+    struct PhaseDetails {
+        uint individualTokenLimit;
+        uint totalTokenLimit;
     }
 
-    uint totalRaised;
-    mapping (address => uint) ownerToTokens;
+    uint private constant MAX_TOTAL_SUPPLY = 500000 * 10**18;
+    uint private constant MAX_ICO_RAISE = 150000 * 10**18;
+    uint private constant EXCHANGE_RATE = 5/1;
+    uint private constant TAX_RATE = 0.02;
+    address payable private treasuryAddress;
+    bool taxEnabled;
+    mapping (Phase => PhaseDetails) phaseToDetails
+    Phase public curPhase;
+
+    // init phaseToDetails in constructor   
     address[] whitelistedInvestors = [];
+
+    function meetsPhaseReqs() internal {
+        if (phase == Phase.Seed) {
+            // if investor can purchase more token
+                // check total and individual limit
+            // return true
+        } else if (phase == Phase.General) {
+            // if investor can purchase more token
+                // check total and individual limit
+            // return true
+        } else if (phase == Phase.Open) {
+            return true;
+        }
+
+        // if phase not set
+        // return false; don't allow purchases
+        return false;
+    }
+    
+    function purchase() external payable {
+        // meets reqs for current phase
+        // allow investor to purchase up to Seed contribution limit
+        // refund remainder
+        // if tax enabled, reduce tax fee
+
+        uint numTokens = msg.value * 5;
+        ownerToTokens[msg.sender] = ownerToTokens[msg.sender] + numTokens; // TODO may not need, may come w/ ERC20
+    }
+
+    function advancePhase() external onlyOwner {
+        // distribute tokens from here
+    }
+
+    function pauseFundraising() external onlyOwner {}
+
+    function toggleTax() external onlyOwner {}
+
+    function whitelistInvestor(address _investor) external onlyOwner {}
+
+
+    ```
+
+    ### How to manage phases:
+    ```
+    // Decision: Option 2
+    // Changing the phase is more readable, easier to understand
+
+    // Option 1:
+    FundingPhase public phase;
+    FundingPhase[4] public phases;
+
+    FundingPhase currentPhase = phases[phase];
+    currentPhase.phase;
+    currentPhase.contributionLimit;
+
+    // incrementing
+    phase++;
+
+    // Option 2:
+    Phase public phase;
+    mapping (Phase => uint) public phases;
+
+    uint currentPhase = phases[phase]
+
+    // incrementing
+    if (phase == Phase.Seed) {
+        phase = Phase.General
+    } else if ( ... ) {
+        ...
+    }
+    ...
+
     ```
