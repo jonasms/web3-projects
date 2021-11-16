@@ -81,6 +81,7 @@ contract SotanoCoin is ERC20, Ownable {
         uint256 etherForPurchase;
         uint256 etherToRefund;
 
+        // TODO handle taxes here?
         if (msg.value > tokenPurchaseLimit / 5 ether) {
             etherForPurchase = (msg.value - tokenPurchaseLimit / 5 ether);
             etherToRefund = msg.value - etherForPurchase;
@@ -94,6 +95,21 @@ contract SotanoCoin is ERC20, Ownable {
         if (etherToRefund > 0) {
             (bool success, ) = msg.sender.call{ value: etherToRefund }("");
             require(success, "Refund failed");
+        }
+    }
+
+    function addToWhitelist(address _investor) external onlyOwner {
+        whitelistedInvestors[_investor] = true;
+    }
+
+    function advancePhase() external onlyOwner {
+        if (curPhase == Phase.None) {
+            curPhase = Phase.Seed;
+        } else if (curPhase == Phase.Seed) {
+            curPhase = Phase.General;
+        } else if (curPhase == Phase.General) {
+            curPhase = Phase.Open;
+            // TODO distribute tokens
         }
     }
 }
