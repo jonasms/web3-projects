@@ -1,10 +1,10 @@
 require("hardhat");
 
 async function main() {
-  const Campaign = await ethers.getContractFactory("Campaign");
-  console.log("Deploying Campaign");
-  const campaign = await Campaign.deploy("Test Campaign", ethers.utils.parseEther("5"));
-  console.log("Campaign deployed to: ", campaign.address);
+  const Sotano = await ethers.getContractFactory("Sotano");
+  console.log("Deploying Sotano");
+  const sotano = await Sotano.deploy();
+  console.log("Sotano deployed to: ", sotano.address);
 }
 
 main()
