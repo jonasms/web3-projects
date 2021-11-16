@@ -1,10 +1,10 @@
 require("hardhat");
 
 async function main() {
-  const Sotano = await ethers.getContractFactory("Sotano");
-  console.log("Deploying Sotano");
+  const Sotano = await ethers.getContractFactory("SotanoCoin");
+  console.log("Deploying SotanoCoin");
   const sotano = await Sotano.deploy();
-  console.log("Sotano deployed to: ", sotano.address);
+  console.log("SotanoCoin deployed to: ", sotano.address);
 }
 
 main()

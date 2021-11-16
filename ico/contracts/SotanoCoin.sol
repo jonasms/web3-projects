@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-contract Sotano is ERC20, Ownable {
+contract SotanoCoin is ERC20, Ownable {
     enum Phase {
         None,
         Seed,

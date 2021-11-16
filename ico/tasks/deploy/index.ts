@@ -1,1 +1,1 @@
-import "./sotano";
+import "./sotanoCoin";
