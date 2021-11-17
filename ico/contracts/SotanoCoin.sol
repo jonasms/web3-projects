@@ -34,7 +34,7 @@ contract SotanoCoin is ERC20, Ownable {
     constructor() ERC20("Sotano", "SOT") {
         phaseToDetails[Phase.None] = PhaseDetails(0, 0);
         phaseToDetails[Phase.Seed] = PhaseDetails(7500 * 10**18, 75000 * 10**18);
-        phaseToDetails[Phase.General] = PhaseDetails(5000 * 10**18, 150000 * 10**18);
+        phaseToDetails[Phase.General] = PhaseDetails(5000 * 10**18, MAX_ICO_RAISE);
         phaseToDetails[Phase.Open] = PhaseDetails(MAX_ICO_RAISE, MAX_ICO_RAISE);
     }
 
@@ -97,6 +97,10 @@ contract SotanoCoin is ERC20, Ownable {
         }
 
         uint256 numTokensToPurchase = etherForPurchasing * 5;
+
+        // TODO:
+        // if phase is Open, distribute token
+        // else, update record of tokens owed
         investorToTokensOwed[msg.sender] += numTokensToPurchase;
         totTokensPurchased += numTokensToPurchase;
 
@@ -119,7 +123,7 @@ contract SotanoCoin is ERC20, Ownable {
             curPhase = Phase.General;
         } else if (curPhase == Phase.General) {
             curPhase = Phase.Open;
-            // TODO distribute tokens
+            // TODO distribute owed tokens
         }
     }
 }

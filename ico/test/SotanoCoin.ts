@@ -81,7 +81,7 @@ describe("SotanoCoin", function () {
             it("Should fail when 75,000 tokens have been ordered", async function() {
                 await this.sotanoCoin.addToWhitelist(this.accountAddresses);
                 const { sotanoCoin, account11 } = this;
-                // 10 different accounts purchase 1500ETH of tokens each
+                // note: 10 different accounts purchase 1500ETH of tokens each
                 const purchaseTransactions = this.accounts.slice(0, 10).map(async function (account: SignerWithAddress) {
                     return sotanoCoin.connect(account).purchase({ value: parseEther("1500") });    
                 });
@@ -130,9 +130,9 @@ describe("SotanoCoin", function () {
                 await expect(this.sotanoCoin.purchase({ value: parseEther("0.01")})).to.be.reverted;
             });
 
-            it("Should fail when 150,000 tokens have been ordered in total", async function() {                
+            it("Should fail when 150k tokens have been ordered in total", async function() {                
                 const { sotanoCoin, account1, account2, accounts } = this;
-                // 30 different accounts purchase 1000ETH of tokens each
+                // note: 30 different accounts purchase 1000ETH of tokens each
                 const purchaseTransactions = this.accounts.slice(0, 30).map(async function (account: SignerWithAddress) {
                     return sotanoCoin.connect(account).purchase({ value: parseEther("1000") });    
                 });
@@ -146,9 +146,56 @@ describe("SotanoCoin", function () {
                     ).to.equal(parseEther("5000"));
     
                     expect(await sotanoCoin.totTokensPurchased()).to.equal(parseEther("150000"));
-                    await expect(sotanoCoin.connect(accounts[30]).purchase({ value: parseEther("0.01") })).to.be.reverted;
+                    await expect(
+                        sotanoCoin.connect(accounts[30]).purchase({ value: parseEther("0.01") })
+                    ).to.be.reverted;
                 });
             });
+        });
+
+        describe("'Open' Phase", function () {
+            beforeEach(async function() {
+                // Advance to phase 'Open'
+                await this.sotanoCoin.advancePhase();
+                await this.sotanoCoin.advancePhase();
+                await this.sotanoCoin.advancePhase();
+            });
+
+            it("Should allow purchaes of tokens up to the max supply of 150k tokens", async function() {
+                // TODO get token balance instead of 'tokens owed'
+                // TODO get total tokens distributed
+                
+                const [account31, account32, account33, account34] = this.accounts.slice(30)
+                await this.sotanoCoin.connect(account31).purchase({ value: parseEther("8000")});
+                await this.sotanoCoin.connect(account32).purchase({ value: parseEther("8000")});
+                await this.sotanoCoin.connect(account33).purchase({ value: parseEther("8000")});
+                await this.sotanoCoin.connect(account34).purchase({ value: parseEther("8000")});
+                expect(
+                    await this.sotanoCoin.investorToTokensOwed(account31.address)
+                ).to.equal(parseEther("40000"));
+                expect(
+                    await this.sotanoCoin.investorToTokensOwed(account32.address)
+                ).to.equal(parseEther("40000"));
+                expect(
+                    await this.sotanoCoin.investorToTokensOwed(account33.address)
+                ).to.equal(parseEther("40000"));
+
+                // note: Only gives purchaser up to total supply
+                expect(
+                    await this.sotanoCoin.investorToTokensOwed(account34.address)
+                ).to.equal(parseEther("30000"));
+                await expect(
+                    this.sotanoCoin.purchase({ value: parseEther("0.01") })
+                ).to.be.revertedWith("Total tokens purchased has already met phase limit.");
+
+            });
+
+            // Test that tokens are distributed
+
+        });
+
+        describe("Toke distribution", function() {
+            // Test that tokens are distributed when phase changes to 'Open'
         });
 
         describe("Whitelist", function () {
