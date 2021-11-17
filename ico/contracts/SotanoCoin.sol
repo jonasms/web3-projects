@@ -85,6 +85,7 @@ contract SotanoCoin is ERC20, Ownable {
         // TODO handle taxes here?
 
         // Convert tokenPurchaseLimit to ETH equivalent
+        // TODO use constant for `5`
         if (msg.value > tokenPurchaseLimit / 5) {
             etherForPurchase = (msg.value - tokenPurchaseLimit / 5);
             etherToRefund = msg.value - etherForPurchase;
