@@ -102,8 +102,10 @@ contract SotanoCoin is ERC20, Ownable {
         }
     }
 
-    function addToWhitelist(address _investor) external onlyOwner {
-        whitelistedInvestors[_investor] = true;
+    function addToWhitelist(address[] memory _toWhitelist) external onlyOwner {
+        for (uint256 i = 0; i < _toWhitelist.length; i++) {
+            whitelistedInvestors[_toWhitelist[i]] = true;
+        }
     }
 
     function advancePhase() external onlyOwner {
