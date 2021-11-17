@@ -26,9 +26,11 @@
     i. Can be toggled on/off by the owner. Initialized to 'off'.
     ii. Collected tax revenue is placed into a treasury account.
     iii. 2% is reduced from each transfer.
+        - If 1 ETH is sent w/ `purchase` then 2% of that 1 ETH in tokens is sent to the treasury.
 
 
 ### Questions
+1. Store both ETH and tokens in the treasury?
 
 ## Architecture
     * Whitelist investors
