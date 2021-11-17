@@ -68,14 +68,15 @@ describe("SotanoCoin", function () {
                 await expect(this.sotanoCoin.purchase({ value: parseEther("0.01") })).to.be.reverted;
             });
 
-            // it("Should allow purchase up to 7,500 tokens and refund excess", async function() {
-            //     // TODO test refund?
-            //     await this.sotanoCoin.purchase({ value: parseEther("1500.01")});
-            //     expect(
-            //         await this.sotanoCoin.investorToTokensOwed(this.account1.address)
-            //     ).to.equal(parseEther("7500"));
-            //     await expect(this.sotanoCoin.purchase({ value: parseEther("0.01")})).to.be.reverted;
-            // });
+            it("Should allow purchase up to 7,500 tokens and refund excess", async function() {
+                // TODO test refund?
+                await this.sotanoCoin.addToWhitelist([this.account1.address]);
+                await this.sotanoCoin.purchase({ value: parseEther("1500.01")});
+                expect(
+                    await this.sotanoCoin.investorToTokensOwed(this.account1.address)
+                ).to.equal(parseEther("7500"));
+                await expect(this.sotanoCoin.purchase({ value: parseEther("0.01")})).to.be.reverted;
+            });
     
             it("Should fail when 75,000 tokens have been ordered", async function() {
                 await this.sotanoCoin.addToWhitelist(this.accountAddresses);
@@ -131,6 +132,7 @@ describe("SotanoCoin", function () {
 
             it("Should fail when 150,000 tokens have been ordered in total", async function() {                
                 const { sotanoCoin, account1, account2, accounts } = this;
+                // 30 different accounts purchase 1000ETH of tokens each
                 const purchaseTransactions = this.accounts.slice(0, 30).map(async function (account: SignerWithAddress) {
                     return sotanoCoin.connect(account).purchase({ value: parseEther("1000") });    
                 });
