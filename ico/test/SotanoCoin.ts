@@ -67,6 +67,15 @@ describe("SotanoCoin", function () {
                 expect(await this.sotanoCoin.totTokensPurchased()).to.equal(parseEther("7500"));
                 await expect(this.sotanoCoin.purchase({ value: parseEther("0.01") })).to.be.reverted;
             });
+
+            // it("Should allow purchase up to 7,500 tokens and refund excess", async function() {
+            //     // TODO test refund?
+            //     await this.sotanoCoin.purchase({ value: parseEther("1500.01")});
+            //     expect(
+            //         await this.sotanoCoin.investorToTokensOwed(this.account1.address)
+            //     ).to.equal(parseEther("7500"));
+            //     await expect(this.sotanoCoin.purchase({ value: parseEther("0.01")})).to.be.reverted;
+            // });
     
             it("Should fail when 75,000 tokens have been ordered", async function() {
                 await this.sotanoCoin.addToWhitelist(this.accountAddresses);
@@ -91,7 +100,6 @@ describe("SotanoCoin", function () {
                 await this.sotanoCoin.advancePhase();
             });
 
-
             it("Should allow for a purchaser to order up to 5,000 tokens", async function() {
                 await this.sotanoCoin.purchase({ value: parseEther("1000")});
                 await this.sotanoCoin.connect(this.account2).purchase({ value: parseEther("1000")});
@@ -106,6 +114,18 @@ describe("SotanoCoin", function () {
 
             it("Should fail when purchaser has already ordered 5,000 tokens", async function() {
                 await this.sotanoCoin.purchase({ value: parseEther("1000")});
+                expect(
+                    await this.sotanoCoin.investorToTokensOwed(this.account1.address)
+                ).to.equal(parseEther("5000"));
+                await expect(this.sotanoCoin.purchase({ value: parseEther("0.01")})).to.be.reverted;
+            });
+
+            it("Should allow purchase up to 5,000 tokens and refund excess", async function() {
+                // TODO test refund?
+                await this.sotanoCoin.purchase({ value: parseEther("1000.01")});
+                expect(
+                    await this.sotanoCoin.investorToTokensOwed(this.account1.address)
+                ).to.equal(parseEther("5000"));
                 await expect(this.sotanoCoin.purchase({ value: parseEther("0.01")})).to.be.reverted;
             });
 
@@ -129,7 +149,6 @@ describe("SotanoCoin", function () {
             });
         });
 
-
         describe("Whitelist", function () {
             it("It should add an address to the whitelist", async function() {
                 await this.sotanoCoin.addToWhitelist([this.account1.address]);
@@ -137,6 +156,4 @@ describe("SotanoCoin", function () {
             });
         });
     });
-
-
 });

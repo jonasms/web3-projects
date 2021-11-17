@@ -67,33 +67,37 @@ contract SotanoCoin is ERC20, Ownable {
 
     /**
         @dev
-     */
+    */
     function purchase() external payable {
         require(meetsPhaseReqs(), "Did not meet ICO phase requirements");
         // TODO confirm that `storage` uses less gas than `memory` here.
         PhaseDetails storage phase = phaseToDetails[curPhase];
         uint256 tokensOwedTo = investorToTokensOwed[msg.sender];
 
-        uint256 tokenPurchaseLimit = Math.max(
+        /**
+            The current token purchase limit is
+            the lower of the total and individual limits.
+        */
+        uint256 tokenPurchaseLimit = Math.min(
             phase.totalTokenLimit - totTokensPurchased, // TODO change name; "Purchased" to "Owed"?
             phase.individualTokenLimit - tokensOwedTo
         );
 
-        uint256 etherForPurchase;
+        uint256 etherForPurchasing;
         uint256 etherToRefund;
 
         // TODO handle taxes here?
 
         // Convert tokenPurchaseLimit to ETH equivalent
         // TODO use constant for `5`
-        if (msg.value > tokenPurchaseLimit / 5) {
-            etherForPurchase = (msg.value - tokenPurchaseLimit / 5);
-            etherToRefund = msg.value - etherForPurchase;
+        if (msg.value > (tokenPurchaseLimit / 5)) {
+            etherToRefund = msg.value - (tokenPurchaseLimit / 5);
+            etherForPurchasing = msg.value - etherToRefund;
         } else {
-            etherForPurchase = msg.value;
+            etherForPurchasing = msg.value;
         }
 
-        uint256 numTokensToPurchase = etherForPurchase * 5;
+        uint256 numTokensToPurchase = etherForPurchasing * 5;
         investorToTokensOwed[msg.sender] += numTokensToPurchase;
         totTokensPurchased += numTokensToPurchase;
 
