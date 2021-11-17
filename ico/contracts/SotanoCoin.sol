@@ -18,6 +18,7 @@ contract SotanoCoin is ERC20, Ownable {
         uint256 totalTokenLimit;
     }
 
+    // TODO reconsider accessiblity of each var
     uint256 private constant MAX_TOTAL_SUPPLY = 500000 * 10**18;
     uint256 private constant MAX_ICO_RAISE = 150000 * 10**18;
     uint256 private constant EXCHANGE_RATE = 5 / 1;
@@ -26,9 +27,9 @@ contract SotanoCoin is ERC20, Ownable {
     bool taxEnabled;
     mapping(Phase => PhaseDetails) phaseToDetails;
     Phase public curPhase = Phase.None;
-    mapping(address => bool) whitelistedInvestors;
-    mapping(address => uint256) investorToTokensOwed;
-    uint256 totTokensPurchased;
+    mapping(address => bool) public whitelistedInvestors;
+    mapping(address => uint256) public investorToTokensOwed;
+    uint256 public totTokensPurchased;
 
     constructor() ERC20("Sotano", "SOT") {
         phaseToDetails[Phase.None] = PhaseDetails(0, 0);
@@ -68,22 +69,24 @@ contract SotanoCoin is ERC20, Ownable {
         @dev
      */
     function purchase() external payable {
-        require(meetsPhaseReqs());
+        require(meetsPhaseReqs(), "Did not meet ICO phase requirements");
         // TODO confirm that `storage` uses less gas than `memory` here.
         PhaseDetails storage phase = phaseToDetails[curPhase];
-        uint256 tokensOwned = investorToTokensOwed[msg.sender];
+        uint256 tokensOwedTo = investorToTokensOwed[msg.sender];
 
         uint256 tokenPurchaseLimit = Math.max(
-            totTokensPurchased - phase.totalTokenLimit,
-            tokensOwned - phase.individualTokenLimit
+            phase.totalTokenLimit - totTokensPurchased, // TODO change name; "Purchased" to "Owed"?
+            phase.individualTokenLimit - tokensOwedTo
         );
 
         uint256 etherForPurchase;
         uint256 etherToRefund;
 
         // TODO handle taxes here?
-        if (msg.value > tokenPurchaseLimit / 5 ether) {
-            etherForPurchase = (msg.value - tokenPurchaseLimit / 5 ether);
+
+        // Convert tokenPurchaseLimit to ETH equivalent
+        if (msg.value > tokenPurchaseLimit / 5) {
+            etherForPurchase = (msg.value - tokenPurchaseLimit / 5);
             etherToRefund = msg.value - etherForPurchase;
         } else {
             etherForPurchase = msg.value;
@@ -91,6 +94,7 @@ contract SotanoCoin is ERC20, Ownable {
 
         uint256 numTokensToPurchase = etherForPurchase * 5;
         investorToTokensOwed[msg.sender] += numTokensToPurchase;
+        totTokensPurchased += numTokensToPurchase;
 
         if (etherToRefund > 0) {
             (bool success, ) = msg.sender.call{ value: etherToRefund }("");
