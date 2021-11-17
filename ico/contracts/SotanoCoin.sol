@@ -43,33 +43,32 @@ contract SotanoCoin is ERC20, Ownable {
         purchase tokens.
      */
     // TODO I would prefer a pattern that enables descriptive error messages.
-    function meetsPhaseReqs() internal view returns (bool) {
+    modifier meetsPhaseReqs() {
         if (curPhase == Phase.None) {
-            return false;
+            revert("Fundraising hasn't started.");
         }
 
         // TODO confirm that `storage` uses less gas than `memory` here.
         PhaseDetails storage phase = phaseToDetails[curPhase];
         if (curPhase == Phase.Seed && !whitelistedInvestors[msg.sender]) {
-            return false;
+            revert("Purchaser is not whitelisted.");
         }
 
         if (investorToTokensOwed[msg.sender] >= phase.individualTokenLimit) {
-            return false;
+            revert("Purchaser has already met individual token limit.");
         }
 
         if (totTokensPurchased >= phase.totalTokenLimit) {
-            return false;
+            revert("Total tokens purchased has already met phase limit.");
         }
 
-        return true;
+        _;
     }
 
     /**
         @dev
     */
-    function purchase() external payable {
-        require(meetsPhaseReqs(), "Did not meet ICO phase requirements");
+    function purchase() external payable meetsPhaseReqs {
         // TODO confirm that `storage` uses less gas than `memory` here.
         PhaseDetails storage phase = phaseToDetails[curPhase];
         uint256 tokensOwedTo = investorToTokensOwed[msg.sender];
