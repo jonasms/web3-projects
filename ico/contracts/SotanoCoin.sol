@@ -25,17 +25,20 @@ contract SotanoCoin is ERC20, Ownable {
     uint256 private constant MAX_TOTAL_SUPPLY = 500000 * 10**18;
     uint256 private constant MAX_ICO_RAISE = 150000 * 10**18;
     uint256 private constant EXCHANGE_RATE = 5;
-    uint256 private constant TAX_RATE = 2 * 10**16;
+    // note: 2% is equiv. to 1/50 -- divide tokens by TAX_RATE to get 2%
+    uint256 private constant TAX_RATE = 50;
     address payable private treasuryAddress;
-    bool taxEnabled;
-    mapping(Phase => PhaseDetails) phaseToDetails;
+    bool public feesEnabled;
+    mapping(Phase => PhaseDetails) public phaseToDetails;
     Phase public curPhase = Phase.None;
     mapping(address => bool) public whitelistedInvestors;
     mapping(address => uint256) public investorToTokensOwed;
     address[] private investors;
     uint256 public totTokensPurchased;
 
-    constructor() ERC20("Sotano", "SOT") {
+    constructor(address payable _treasuryAddress) ERC20("Sotano", "SOT") {
+        treasuryAddress = _treasuryAddress;
+
         phaseToDetails[Phase.None] = PhaseDetails(0, 0);
         phaseToDetails[Phase.Seed] = PhaseDetails(7500 * 10**18, 75000 * 10**18);
         phaseToDetails[Phase.General] = PhaseDetails(5000 * 10**18, MAX_ICO_RAISE);
@@ -117,12 +120,6 @@ contract SotanoCoin is ERC20, Ownable {
         }
     }
 
-    function addToWhitelist(address[] memory _toWhitelist) external onlyOwner {
-        for (uint256 i = 0; i < _toWhitelist.length; i++) {
-            whitelistedInvestors[_toWhitelist[i]] = true;
-        }
-    }
-
     function advancePhase() external onlyOwner {
         if (curPhase == Phase.None) {
             curPhase = Phase.Seed;
@@ -139,15 +136,28 @@ contract SotanoCoin is ERC20, Ownable {
         }
     }
 
+    function addToWhitelist(address[] memory _toWhitelist) external onlyOwner {
+        for (uint256 i = 0; i < _toWhitelist.length; i++) {
+            whitelistedInvestors[_toWhitelist[i]] = true;
+        }
+    }
+
+    function toggleFees() external onlyOwner {
+        feesEnabled = !feesEnabled;
+    }
+
+    // TODO setTreasuryAddress ?
+
     /**
-        @dev _amount is in tokens, not ETH.
+        @dev `_amount` represents tokens, not ETH.
+        Transaction fees are deducted from `_amount`, not tacked on.
     */
     function mint(address _to, uint256 _amount) internal {
         uint256 amountToMint;
         uint256 transactionFee;
 
-        if (taxEnabled) {
-            transactionFee = _amount * TAX_RATE;
+        if (feesEnabled) {
+            transactionFee = _amount / TAX_RATE;
             amountToMint = _amount - transactionFee;
         } else {
             amountToMint = _amount;

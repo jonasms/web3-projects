@@ -9,11 +9,17 @@ import { expect } from "chai";
 
 const { utils } = ethers;
 const { parseEther } = utils;
+const { provider } = waffle;
+
+const EXCHANGE_RATE = 5;
+const TAX_RATE = 0.02;
 
 describe("SotanoCoin", function () {
     before (async function () {
         const accounts: SignerWithAddress[] = await ethers.getSigners();
         [
+            this.owner,
+            this.treasuryWallet,
             this.account1,
             this.account2,
             this.account3,
@@ -32,11 +38,11 @@ describe("SotanoCoin", function () {
 
     beforeEach(async function () {
       const SotanoCoinArtifact: Artifact = await artifacts.readArtifact("SotanoCoin");
-      this.sotanoCoin = <SotanoCoin>await waffle.deployContract(this.account1, SotanoCoinArtifact);
+      this.sotanoCoin = <SotanoCoin>await waffle.deployContract(this.owner, SotanoCoinArtifact, [this.treasuryWallet.address]);
       this.address = this.sotanoCoin.address;
     });
 
-    describe("Purchase", function () {
+    describe("Phases - Token Purchase and Distribution", function () {
         describe("'None' Phase", function () {
             it("Should fail when `phase` is Phase.None", async function() {
                 await expect(this.sotanoCoin.purchase({ value: parseEther("1") })).to.be.reverted;
@@ -53,16 +59,24 @@ describe("SotanoCoin", function () {
             it("Should fail when purchaser is NOT whitelisted", async function() {
                 await expect(this.sotanoCoin.purchase({ value: parseEther("1") })).to.be.reverted;
                 expect(await this.sotanoCoin.totTokensPurchased()).to.equal(0);
+                expect(
+                    await this.sotanoCoin.investorToTokensOwed(this.owner.address)
+                ).to.equal(0);
             });
     
             it("Should succeed when purchaser is whitelisted", async function() {
-                await this.sotanoCoin.addToWhitelist([this.account1.address]);
-                await this.sotanoCoin.purchase({ value: parseEther("1") });
+                await this.sotanoCoin.addToWhitelist([this.account4.address]);
+                await this.sotanoCoin.connect(this.account4).purchase({ value: parseEther("1") });
                 expect(await this.sotanoCoin.totTokensPurchased()).to.equal(parseEther("5"));
+                expect(
+                    await this.sotanoCoin
+                        .connect(this.account4)
+                        .investorToTokensOwed(this.account4.address)
+                ).to.equal(parseEther("5"));
             });
     
             it("Should fail when purchaser has already ordered 7,500 tokens", async function() {
-                await this.sotanoCoin.addToWhitelist([this.account1.address]);
+                await this.sotanoCoin.addToWhitelist([this.owner.address]);
                 await this.sotanoCoin.purchase({ value: parseEther("1500") });
                 expect(await this.sotanoCoin.totTokensPurchased()).to.equal(parseEther("7500"));
                 await expect(this.sotanoCoin.purchase({ value: parseEther("0.01") })).to.be.reverted;
@@ -70,10 +84,10 @@ describe("SotanoCoin", function () {
 
             it("Should allow purchase up to 7,500 tokens and refund excess", async function() {
                 // TODO test refund?
-                await this.sotanoCoin.addToWhitelist([this.account1.address]);
+                await this.sotanoCoin.addToWhitelist([this.owner.address]);
                 await this.sotanoCoin.purchase({ value: parseEther("1500.01")});
                 expect(
-                    await this.sotanoCoin.investorToTokensOwed(this.account1.address)
+                    await this.sotanoCoin.investorToTokensOwed(this.owner.address)
                 ).to.equal(parseEther("7500"));
                 await expect(this.sotanoCoin.purchase({ value: parseEther("0.01")})).to.be.reverted;
             });
@@ -105,7 +119,7 @@ describe("SotanoCoin", function () {
                 await this.sotanoCoin.purchase({ value: parseEther("1000")});
                 await this.sotanoCoin.connect(this.account2).purchase({ value: parseEther("1000")});
                 expect(
-                    await this.sotanoCoin.investorToTokensOwed(this.account1.address)
+                    await this.sotanoCoin.investorToTokensOwed(this.owner.address)
                 ).to.equal(parseEther("5000"));
                 expect(
                     await this.sotanoCoin.investorToTokensOwed(this.account2.address)
@@ -116,7 +130,7 @@ describe("SotanoCoin", function () {
             it("Should fail when purchaser has already ordered 5,000 tokens", async function() {
                 await this.sotanoCoin.purchase({ value: parseEther("1000")});
                 expect(
-                    await this.sotanoCoin.investorToTokensOwed(this.account1.address)
+                    await this.sotanoCoin.investorToTokensOwed(this.owner.address)
                 ).to.equal(parseEther("5000"));
                 await expect(this.sotanoCoin.purchase({ value: parseEther("0.01")})).to.be.reverted;
             });
@@ -125,13 +139,13 @@ describe("SotanoCoin", function () {
                 // TODO test refund?
                 await this.sotanoCoin.purchase({ value: parseEther("1000.01")});
                 expect(
-                    await this.sotanoCoin.investorToTokensOwed(this.account1.address)
+                    await this.sotanoCoin.investorToTokensOwed(this.owner.address)
                 ).to.equal(parseEther("5000"));
                 await expect(this.sotanoCoin.purchase({ value: parseEther("0.01")})).to.be.reverted;
             });
 
             it("Should fail when 150k tokens have been ordered in total", async function() {                
-                const { sotanoCoin, account1, account2, accounts } = this;
+                const { sotanoCoin, owner, account2, accounts } = this;
                 // note: 30 different accounts purchase 1000ETH of tokens each
                 const purchaseTransactions = this.accounts.slice(0, 30).map(async function (account: SignerWithAddress) {
                     return sotanoCoin.connect(account).purchase({ value: parseEther("1000") });    
@@ -139,7 +153,7 @@ describe("SotanoCoin", function () {
 
                 return Promise.all(purchaseTransactions).then(async function() {
                     expect(
-                        await sotanoCoin.investorToTokensOwed(account1.address)
+                        await sotanoCoin.investorToTokensOwed(owner.address)
                     ).to.equal(parseEther("5000"));
                     expect(
                         await sotanoCoin.investorToTokensOwed(account2.address)
@@ -194,39 +208,72 @@ describe("SotanoCoin", function () {
 
             });
         });
+    });
 
-        describe("Initial Token Distribution", function() {
-            // Test that tokens are distributed when phase changes to 'Open'
-            it("Should distribute all tokens owed when phase is changed to 'Open'", async function() {
-                // Advance to phase 'General'
-                await this.sotanoCoin.advancePhase();
-                await this.sotanoCoin.advancePhase();
+    describe("Initial Token Distribution", function() {
+        it("Should distribute all tokens owed when phase is changed to 'Open'", async function() {
+            // Advance to phase 'General'
+            await this.sotanoCoin.advancePhase();
+            await this.sotanoCoin.advancePhase();
 
-                await this.sotanoCoin.purchase({ value: parseEther("5") });
-                await this.sotanoCoin.connect(this.account2).purchase({ value: parseEther("10") });
-                await this.sotanoCoin.connect(this.account3).purchase({ value: parseEther("15") });
+            await this.sotanoCoin.purchase({ value: parseEther("5") });
+            await this.sotanoCoin.connect(this.account2).purchase({ value: parseEther("10") });
+            await this.sotanoCoin.connect(this.account3).purchase({ value: parseEther("15") });
 
-                expect(await this.sotanoCoin.totTokensPurchased()).to.equal(parseEther("150"));
+            expect(await this.sotanoCoin.totTokensPurchased()).to.equal(parseEther("150"));
 
-                await this.sotanoCoin.advancePhase();
+            await this.sotanoCoin.advancePhase();
 
-                expect(
-                    await this.sotanoCoin.balanceOf(this.account1.address)
-                ).to.equal(parseEther("25"));
-                expect(
-                    await this.sotanoCoin.balanceOf(this.account2.address)
-                ).to.equal(parseEther("50"));
-                expect(
-                    await this.sotanoCoin.balanceOf(this.account3.address)
-                ).to.equal(parseEther("75"));
-            });
+            expect(
+                await this.sotanoCoin.balanceOf(this.owner.address)
+            ).to.equal(parseEther("25"));
+            expect(
+                await this.sotanoCoin.balanceOf(this.account2.address)
+            ).to.equal(parseEther("50"));
+            expect(
+                await this.sotanoCoin.balanceOf(this.account3.address)
+            ).to.equal(parseEther("75"));
+        });
+    });
+
+    describe("Transaction Fees", function() {
+        beforeEach(async function() {
+            // Advance to phase 'General'
+            await this.sotanoCoin.advancePhase();
+            await this.sotanoCoin.advancePhase();
+            await this.sotanoCoin.toggleFees();
         });
 
-        describe("Whitelist", function () {
-            it("It should add an address to the whitelist", async function() {
-                await this.sotanoCoin.addToWhitelist([this.account1.address]);
-                expect(await this.sotanoCoin.whitelistedInvestors(this.account1.address)).to.equal(true);
-            });
+        // Test that tokens mints are taxed on initial mint
+        it("Should apply transaction fee to token mints", async function() {
+            const tokensToPurchase = 4;
+
+            const treasuryTokenBalance = await this.sotanoCoin.balanceOf(this.treasuryWallet.address);
+
+            await this.sotanoCoin.connect(this.account1).purchase({ value: parseEther(`${tokensToPurchase / 4}`) });
+            await this.sotanoCoin.connect(this.account2).purchase({ value: parseEther(`${tokensToPurchase / 4}`) });
+            await this.sotanoCoin.connect(this.account3).purchase({ value: parseEther(`${tokensToPurchase / 4}`) });
+            await this.sotanoCoin.connect(this.account4).purchase({ value: parseEther(`${tokensToPurchase / 4}`) });
+
+            // move to Open phase
+            await this.sotanoCoin.advancePhase();
+
+            // test that treasury balance is balance + 2% of token orders
+            const updatedTreasuryTokenBalance = await this.sotanoCoin.balanceOf(this.treasuryWallet.address);
+            const expectedTreasuryTokenBalance = treasuryTokenBalance +
+                (((tokensToPurchase * EXCHANGE_RATE) * 10**18) * TAX_RATE);
+            expect(updatedTreasuryTokenBalance).to.equal(expectedTreasuryTokenBalance);
+
+        });
+
+        // Test that token transfers are taxed
+
+    });
+
+    describe("Whitelist", function () {
+        it("It should add an address to the whitelist", async function() {
+            await this.sotanoCoin.addToWhitelist([this.owner.address]);
+            expect(await this.sotanoCoin.whitelistedInvestors(this.owner.address)).to.equal(true);
         });
     });
 });
