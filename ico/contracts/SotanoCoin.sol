@@ -46,10 +46,8 @@ contract SotanoCoin is ERC20, Ownable {
     }
 
     /**
-        @dev Returns a boolean indicating whether or not the purchaser can
-        purchase tokens.
-     */
-    // TODO I would prefer a pattern that enables descriptive error messages.
+        @dev Qualifies requests to purchase tokens during the fundraise.
+    */
     modifier meetsPhaseReqs() {
         if (curPhase == Phase.None) {
             revert("Fundraising hasn't started.");
@@ -72,6 +70,7 @@ contract SotanoCoin is ERC20, Ownable {
         _;
     }
 
+    /** STATE HANDLERS */
     /**
         @dev
     */
@@ -93,19 +92,15 @@ contract SotanoCoin is ERC20, Ownable {
         uint256 etherForPurchasing;
 
         // Convert tokenPurchaseLimit to ETH equivalent
-        // TODO use constant for `5`
-        if (msg.value > (tokenPurchaseLimit / 5)) {
-            etherToRefund = msg.value - (tokenPurchaseLimit / 5);
+        if (msg.value > (tokenPurchaseLimit / EXCHANGE_RATE)) {
+            etherToRefund = msg.value - (tokenPurchaseLimit / EXCHANGE_RATE);
             etherForPurchasing = msg.value - etherToRefund;
         } else {
             etherForPurchasing = msg.value;
         }
 
-        uint256 numTokensToPurchase = etherForPurchasing * 5;
+        uint256 numTokensToPurchase = etherForPurchasing * EXCHANGE_RATE;
 
-        // TODO:
-        // if phase is Open, distribute token
-        // else, update record of tokens owed
         if (curPhase == Phase.Open) {
             mint(msg.sender, numTokensToPurchase);
         } else {
@@ -148,6 +143,7 @@ contract SotanoCoin is ERC20, Ownable {
 
     // TODO setTreasuryAddress ?
 
+    /** TOKEN HANDLERS */
     /**
         @dev `_amount` represents tokens, not ETH.
         Transaction fees are deducted from `_amount`, not tacked on.
@@ -170,6 +166,7 @@ contract SotanoCoin is ERC20, Ownable {
         }
     }
 
+    /** UTILS */
     function getNumTokensOutstanding() internal view returns (uint256) {
         return curPhase == Phase.Open ? totalSupply() : totTokensPurchased;
     }
