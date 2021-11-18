@@ -31,6 +31,7 @@ contract SotanoCoin is ERC20, Ownable {
     bool public feesEnabled;
     mapping(Phase => PhaseDetails) public phaseToDetails;
     Phase public curPhase = Phase.None;
+    bool public fundraisingPaused;
     mapping(address => bool) public whitelistedInvestors;
     mapping(address => uint256) public investorToTokensOwed;
     address[] private investors;
@@ -51,6 +52,10 @@ contract SotanoCoin is ERC20, Ownable {
     modifier meetsPhaseReqs() {
         if (curPhase == Phase.None) {
             revert("Fundraising hasn't started.");
+        }
+
+        if (fundraisingPaused) {
+            revert("Purchasing tokens has been paused.");
         }
 
         // TODO confirm that `storage` uses less gas than `memory` here.
@@ -141,6 +146,10 @@ contract SotanoCoin is ERC20, Ownable {
         feesEnabled = !feesEnabled;
     }
 
+    function toggleFundraising() external onlyOwner {
+        fundraisingPaused = !fundraisingPaused;
+    }
+
     // TODO setTreasuryAddress ?
 
     /** TOKEN HANDLERS */
@@ -149,7 +158,7 @@ contract SotanoCoin is ERC20, Ownable {
         Transaction fees are deducted from `_amount`, not tacked on.
     */
     function mint(address _to, uint256 _amount) internal {
-        (uint256 amountToMint, uint256 transactionFee) = handleFee(_amount);
+        (uint256 amountToMint, uint256 transactionFee) = getTransferAndFeeAmounts(_amount);
 
         _mint(_to, amountToMint);
 
@@ -159,7 +168,7 @@ contract SotanoCoin is ERC20, Ownable {
     }
 
     function transfer(address _to, uint256 _amount) public virtual override returns (bool) {
-        (uint256 amountToTransfer, uint256 transactionFee) = handleFee(_amount);
+        (uint256 amountToTransfer, uint256 transactionFee) = getTransferAndFeeAmounts(_amount);
 
         _transfer(_msgSender(), _to, amountToTransfer);
 
@@ -170,7 +179,7 @@ contract SotanoCoin is ERC20, Ownable {
         return true;
     }
 
-    function handleFee(uint256 _amount) internal view returns (uint256, uint256) {
+    function getTransferAndFeeAmounts(uint256 _amount) internal view returns (uint256, uint256) {
         uint256 amountToMint;
         uint256 transactionFee;
 

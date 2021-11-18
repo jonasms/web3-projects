@@ -313,9 +313,7 @@ describe("SotanoCoin", function () {
             const treasuryBalanceAfterTransfers = await this.sotanoCoin.balanceOf(this.treasuryWallet.address);
 
             expect(treasuryBalanceAfterTransfers).to.equal(expectedTreasuryTokenBalance);
-
         });
-
     });
 
     describe("Whitelist", function () {
@@ -324,4 +322,38 @@ describe("SotanoCoin", function () {
             expect(await this.sotanoCoin.whitelistedInvestors(this.owner.address)).to.equal(true);
         });
     });
+
+    describe("Pause/Resume Fundraising", function() {
+        it("Should pause and resume fundraising", async function() {
+            // move to General phase
+            await this.sotanoCoin.advancePhase();
+            await this.sotanoCoin.advancePhase();
+
+            // purchase token
+            // test balance
+            await this.sotanoCoin.connect(this.account1).purchase({ value: parseEther("1") });
+            expect(
+                await this.sotanoCoin.investorToTokensOwed(this.account1.address)
+            ).to.equal(parseEther("5"));
+
+            // pause fundraising
+            await this.sotanoCoin.toggleFundraising();
+
+            // purchase token, expect revert with message
+            await expect(
+                this.sotanoCoin.connect(this.account1).purchase({ value: parseEther("1") })
+            ).to.be.revertedWith("Purchasing tokens has been paused.")
+            
+            // resume fundraising
+            await this.sotanoCoin.toggleFundraising();
+
+
+            // purchase token
+            // test balance
+            await this.sotanoCoin.connect(this.account1).purchase({ value: parseEther("1") });
+            expect(
+                await this.sotanoCoin.investorToTokensOwed(this.account1.address)
+            ).to.equal(parseEther("10"));
+        });
+    })
 });
