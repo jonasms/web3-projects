@@ -166,6 +166,32 @@ contract SotanoCoin is ERC20, Ownable {
         }
     }
 
+    function transfer(address _to, uint256 _amount) public virtual override returns (bool) {
+        (uint256 amountToTransfer, uint256 transactionFee) = handleFee(_amount);
+
+        _transfer(_msgSender(), _to, amountToTransfer);
+
+        if (transactionFee > 0) {
+            _transfer(_msgSender(), treasuryAddress, transactionFee);
+        }
+
+        return true;
+    }
+
+    function handleFee(uint256 _amount) internal view returns (uint256, uint256) {
+        uint256 amountToMint;
+        uint256 transactionFee;
+
+        if (feesEnabled) {
+            transactionFee = _amount / TAX_RATE;
+            amountToMint = _amount - transactionFee;
+        } else {
+            amountToMint = _amount;
+        }
+
+        return (amountToMint, transactionFee);
+    }
+
     /** UTILS */
     function getNumTokensOutstanding() internal view returns (uint256) {
         return curPhase == Phase.Open ? totalSupply() : totTokensPurchased;

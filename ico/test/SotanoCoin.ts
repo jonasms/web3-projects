@@ -3,9 +3,8 @@ import type { Artifact } from "hardhat/types";
 import type { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
 
 import type { SotanoCoin } from "../src/types/SotanoCoin";
-import type {Factory} from "../src/types/Factory";
-import { Signers } from "./types";
 import { expect } from "chai";
+import { BigNumber } from "ethers";
 
 const { utils } = ethers;
 const { parseEther } = utils;
@@ -13,6 +12,13 @@ const { provider } = waffle;
 
 const EXCHANGE_RATE = 5;
 const TAX_RATE = 0.02;
+
+// Helper for printing out readable large numbers
+const bigNumberToFloat = (bigNumber: BigNumber) => {
+    return parseFloat(
+        utils.formatEther(bigNumber)
+    ) * 10**18
+}
 
 describe("SotanoCoin", function () {
     before (async function () {
@@ -247,7 +253,6 @@ describe("SotanoCoin", function () {
         // Test that tokens mints are taxed on initial mint
         it("Should apply transaction fee to token mints", async function() {
             const tokensToPurchase = 4;
-
             const treasuryTokenBalance = await this.sotanoCoin.balanceOf(this.treasuryWallet.address);
 
             await this.sotanoCoin.connect(this.account1).purchase({ value: parseEther(`${tokensToPurchase / 4}`) });
@@ -267,6 +272,49 @@ describe("SotanoCoin", function () {
         });
 
         // Test that token transfers are taxed
+        it("Should apply transaction fees to token mints and transfers", async function() {
+            // move to Open phase
+            await this.sotanoCoin.advancePhase();
+
+            const ethAmount = 4;
+            const treasuryTokenBalance = await this.sotanoCoin.balanceOf(this.treasuryWallet.address);
+
+            await this.sotanoCoin.connect(this.account1).purchase({ value: parseEther(`${ethAmount / 4}`) });
+            await this.sotanoCoin.connect(this.account2).purchase({ value: parseEther(`${ethAmount / 4}`) });
+            await this.sotanoCoin.connect(this.account3).purchase({ value: parseEther(`${ethAmount / 4}`) });
+            await this.sotanoCoin.connect(this.account4).purchase({ value: parseEther(`${ethAmount / 4}`) });
+
+            const treasuryBalanceAfterPurchases = await this.sotanoCoin.balanceOf(this.treasuryWallet.address);
+
+            // note: not sure why this `add` op is working between `number` and `BigNumber` types
+            // consider refactoring
+            let expectedTreasuryTokenBalance = treasuryTokenBalance +
+                (((ethAmount * EXCHANGE_RATE) * 10**18) * TAX_RATE);
+
+            expect(treasuryBalanceAfterPurchases).to.equal(expectedTreasuryTokenBalance);
+
+            const tokenAmount = await this.sotanoCoin.balanceOf(this.account1.address)
+
+            // transfer to address with no token balance
+            await this.sotanoCoin.connect(this.account1).transfer(
+                this.account5.address,
+                tokenAmount.div(2)
+            );
+            
+            // transfer to address with token balance
+            await this.sotanoCoin.connect(this.account2).transfer(
+                this.account3.address,
+                tokenAmount.div(2)
+            );
+
+            // TODO check balances for all accounts
+        
+            expectedTreasuryTokenBalance = treasuryBalanceAfterPurchases.add(tokenAmount.div(50));
+            const treasuryBalanceAfterTransfers = await this.sotanoCoin.balanceOf(this.treasuryWallet.address);
+
+            expect(treasuryBalanceAfterTransfers).to.equal(expectedTreasuryTokenBalance);
+
+        });
 
     });
 
