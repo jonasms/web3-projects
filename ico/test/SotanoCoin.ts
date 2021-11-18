@@ -161,7 +161,7 @@ describe("SotanoCoin", function () {
                 await this.sotanoCoin.advancePhase();
             });
 
-            it("Should allow purchaes of tokens up to the max supply of 150k tokens", async function() {
+            it("Should sell/distribute tokens up to the max supply of 150k tokens", async function() {
                 // TODO get token balance instead of 'tokens owed'
                 // TODO get total tokens distributed
                 
@@ -170,28 +170,29 @@ describe("SotanoCoin", function () {
                 await this.sotanoCoin.connect(account32).purchase({ value: parseEther("8000")});
                 await this.sotanoCoin.connect(account33).purchase({ value: parseEther("8000")});
                 await this.sotanoCoin.connect(account34).purchase({ value: parseEther("8000")});
+
                 expect(
-                    await this.sotanoCoin.investorToTokensOwed(account31.address)
+                    await this.sotanoCoin.balanceOf(account31.address)
                 ).to.equal(parseEther("40000"));
                 expect(
-                    await this.sotanoCoin.investorToTokensOwed(account32.address)
+                    await this.sotanoCoin.balanceOf(account32.address)
                 ).to.equal(parseEther("40000"));
                 expect(
-                    await this.sotanoCoin.investorToTokensOwed(account33.address)
+                    await this.sotanoCoin.balanceOf(account33.address)
                 ).to.equal(parseEther("40000"));
 
                 // note: Only gives purchaser up to total supply
                 expect(
-                    await this.sotanoCoin.investorToTokensOwed(account34.address)
+                    await this.sotanoCoin.balanceOf(account34.address)
                 ).to.equal(parseEther("30000"));
+
                 await expect(
                     this.sotanoCoin.purchase({ value: parseEther("0.01") })
                 ).to.be.revertedWith("Total tokens purchased has already met phase limit.");
 
+                expect(await this.sotanoCoin.totalSupply()).to.equal(parseEther("150000"));
+
             });
-
-            // Test that tokens are distributed
-
         });
 
         describe("Toke distribution", function() {

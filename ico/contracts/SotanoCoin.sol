@@ -5,6 +5,9 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
+// TODO REMOVE
+import "hardhat/console.sol";
+
 contract SotanoCoin is ERC20, Ownable {
     enum Phase {
         None,
@@ -21,8 +24,8 @@ contract SotanoCoin is ERC20, Ownable {
     // TODO reconsider accessiblity of each var
     uint256 private constant MAX_TOTAL_SUPPLY = 500000 * 10**18;
     uint256 private constant MAX_ICO_RAISE = 150000 * 10**18;
-    uint256 private constant EXCHANGE_RATE = 5 / 1;
-    // uint256 private constant TAX_RATE = 0.02;
+    uint256 private constant EXCHANGE_RATE = 5;
+    uint256 private constant TAX_RATE = 2 * 10**16;
     address payable private treasuryAddress;
     bool taxEnabled;
     mapping(Phase => PhaseDetails) phaseToDetails;
@@ -54,11 +57,11 @@ contract SotanoCoin is ERC20, Ownable {
             revert("Purchaser is not whitelisted.");
         }
 
-        if (investorToTokensOwed[msg.sender] >= phase.individualTokenLimit) {
+        if (curPhase < Phase.Open && investorToTokensOwed[msg.sender] >= phase.individualTokenLimit) {
             revert("Purchaser has already met individual token limit.");
         }
 
-        if (totTokensPurchased >= phase.totalTokenLimit) {
+        if (getNumTokensOutstanding() >= phase.totalTokenLimit) {
             revert("Total tokens purchased has already met phase limit.");
         }
 
@@ -78,14 +81,12 @@ contract SotanoCoin is ERC20, Ownable {
             the lower of the total and individual limits.
         */
         uint256 tokenPurchaseLimit = Math.min(
-            phase.totalTokenLimit - totTokensPurchased, // TODO change name; "Purchased" to "Owed"?
+            phase.totalTokenLimit - getNumTokensOutstanding(), // TODO change name; "Purchased" to "Owed"?
             phase.individualTokenLimit - tokensOwedTo
         );
 
-        uint256 etherForPurchasing;
         uint256 etherToRefund;
-
-        // TODO handle taxes here?
+        uint256 etherForPurchasing;
 
         // Convert tokenPurchaseLimit to ETH equivalent
         // TODO use constant for `5`
@@ -101,8 +102,12 @@ contract SotanoCoin is ERC20, Ownable {
         // TODO:
         // if phase is Open, distribute token
         // else, update record of tokens owed
-        investorToTokensOwed[msg.sender] += numTokensToPurchase;
-        totTokensPurchased += numTokensToPurchase;
+        if (curPhase == Phase.Open) {
+            mint(msg.sender, numTokensToPurchase);
+        } else {
+            investorToTokensOwed[msg.sender] += numTokensToPurchase;
+            totTokensPurchased += numTokensToPurchase;
+        }
 
         if (etherToRefund > 0) {
             (bool success, ) = msg.sender.call{ value: etherToRefund }("");
@@ -123,7 +128,34 @@ contract SotanoCoin is ERC20, Ownable {
             curPhase = Phase.General;
         } else if (curPhase == Phase.General) {
             curPhase = Phase.Open;
-            // TODO distribute owed tokens
+            // TODO:
+            // for every investor
+            //  mint tokens owed to investor
         }
+    }
+
+    /**
+        @dev _amount is in tokens, not ETH.
+    */
+    function mint(address _to, uint256 _amount) internal {
+        uint256 amountToMint;
+        uint256 transactionFee;
+
+        if (taxEnabled) {
+            transactionFee = _amount * TAX_RATE;
+            amountToMint = _amount - transactionFee;
+        } else {
+            amountToMint = _amount;
+        }
+
+        _mint(_to, amountToMint);
+
+        if (transactionFee > 0) {
+            _mint(treasuryAddress, transactionFee);
+        }
+    }
+
+    function getNumTokensOutstanding() internal view returns (uint256) {
+        return curPhase == Phase.Open ? totalSupply() : totTokensPurchased;
     }
 }
