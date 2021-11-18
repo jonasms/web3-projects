@@ -139,3 +139,24 @@
     ...
 
     ```
+
+    ### How to manage list of investors and tokens owed
+    ```
+    // Option 1
+    mapping(address => uint256) public investorToTokensOwed; // SSTORE
+    address[] private investorAddresses; // SSTORE
+
+    // Option 2
+    struct Investment {
+        address addr;
+        uint tokensOwed;
+    }
+
+    Investment[] public investments; // SSTORE, SLOAD
+
+    investments.push(Investment(msg.sender, someNumTokens));
+
+    for (uint i = 0; i < investments.length; i++) {
+
+    }
+    ```

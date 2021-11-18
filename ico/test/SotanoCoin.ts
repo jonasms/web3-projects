@@ -195,8 +195,31 @@ describe("SotanoCoin", function () {
             });
         });
 
-        describe("Toke distribution", function() {
+        describe("Initial Token Distribution", function() {
             // Test that tokens are distributed when phase changes to 'Open'
+            it("Should distribute all tokens owed when phase is changed to 'Open'", async function() {
+                // Advance to phase 'General'
+                await this.sotanoCoin.advancePhase();
+                await this.sotanoCoin.advancePhase();
+
+                await this.sotanoCoin.purchase({ value: parseEther("5") });
+                await this.sotanoCoin.connect(this.account2).purchase({ value: parseEther("10") });
+                await this.sotanoCoin.connect(this.account3).purchase({ value: parseEther("15") });
+
+                expect(await this.sotanoCoin.totTokensPurchased()).to.equal(parseEther("150"));
+
+                await this.sotanoCoin.advancePhase();
+
+                expect(
+                    await this.sotanoCoin.balanceOf(this.account1.address)
+                ).to.equal(parseEther("25"));
+                expect(
+                    await this.sotanoCoin.balanceOf(this.account2.address)
+                ).to.equal(parseEther("50"));
+                expect(
+                    await this.sotanoCoin.balanceOf(this.account3.address)
+                ).to.equal(parseEther("75"));
+            });
         });
 
         describe("Whitelist", function () {

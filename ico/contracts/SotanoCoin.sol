@@ -32,6 +32,7 @@ contract SotanoCoin is ERC20, Ownable {
     Phase public curPhase = Phase.None;
     mapping(address => bool) public whitelistedInvestors;
     mapping(address => uint256) public investorToTokensOwed;
+    address[] private investors;
     uint256 public totTokensPurchased;
 
     constructor() ERC20("Sotano", "SOT") {
@@ -106,6 +107,7 @@ contract SotanoCoin is ERC20, Ownable {
             mint(msg.sender, numTokensToPurchase);
         } else {
             investorToTokensOwed[msg.sender] += numTokensToPurchase;
+            investors.push(msg.sender);
             totTokensPurchased += numTokensToPurchase;
         }
 
@@ -128,9 +130,12 @@ contract SotanoCoin is ERC20, Ownable {
             curPhase = Phase.General;
         } else if (curPhase == Phase.General) {
             curPhase = Phase.Open;
-            // TODO:
-            // for every investor
-            //  mint tokens owed to investor
+
+            address investorAddress;
+            for (uint256 i = 0; i < investors.length; i++) {
+                investorAddress = investors[i];
+                mint(investorAddress, investorToTokensOwed[investorAddress]);
+            }
         }
     }
 
