@@ -149,15 +149,7 @@ contract SotanoCoin is ERC20, Ownable {
         Transaction fees are deducted from `_amount`, not tacked on.
     */
     function mint(address _to, uint256 _amount) internal {
-        uint256 amountToMint;
-        uint256 transactionFee;
-
-        if (feesEnabled) {
-            transactionFee = _amount / TAX_RATE;
-            amountToMint = _amount - transactionFee;
-        } else {
-            amountToMint = _amount;
-        }
+        (uint256 amountToMint, uint256 transactionFee) = handleFee(_amount);
 
         _mint(_to, amountToMint);
 
