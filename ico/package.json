@@ -1,6 +1,6 @@
 {
-  "name": "@jonassota/crowdfunder",
-  "description": "A contract for crowdfunding campaigns",
+  "name": "@jonassota/ico",
+  "description": "A contract for a token ico",
   "version": "1.0.0",
   "author": {
     "name": "Jonas Sota"
