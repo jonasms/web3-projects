@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { ethers } from "ethers"
 import Container from '@mui/material/Container';
 import Box from "@mui/material/Box";
@@ -20,25 +20,39 @@ const { parseEther, formatEther } = utils;
 
 const InvestorPortalView = ({ account, ...props }: any) => {
     const [statusMessage, setStatusMessage] = useState("");
-    const [numTokens, setNumTokens] = useState(0);
+    const [numTokensOwed, setNumTokensOwed] = useState(0);
+    const [numTokensMinted, setNumTokensMinted] = useState(0);
     const [tokensToPurchase, setTokensToPurchase] = useState("0");
 //   const [curPhase, setCurPase] = useState();
-//   const account = useRef(props.account);
-    const contract = useRef(props.contract);
+    const contract = useRef(props.contract).current;
+
+    async function getTokensOwed() {
+        contract.investorToTokensOwed(account).then((tokensOwed: any) => {
+            console.log("TOKENS OWED: ", formatEther(tokensOwed));
+            setNumTokensOwed(parseFloat(formatEther(tokensOwed)));
+        });
+    }
+
+    async function getTokensMinted() {
+        contract.balanceOf(account).then((tokens: any) => {
+            console.log("TOKENS OWED: ", formatEther(tokens));
+            setNumTokensMinted(parseFloat(formatEther(tokens)));
+        });
+    }
+
+
+    const _getTokensOwed = useCallback(getTokensOwed, [account, contract]);
+    const _getTokensMinted = useCallback(getTokensMinted, [account, contract]);
   
     useEffect(() => {
-        contract.current.investorToTokensOwed(account).then((tokensOwed: any) => {
-            console.log("TOKENS OWED: ", formatEther(tokensOwed));
-            setNumTokens(parseFloat(formatEther(tokensOwed)));
-        });
-
+        _getTokensOwed();
+        _getTokensMinted();
     // TODO CUR PHASE
     // contract.current.curPhase().then((phase: any) => {
     //     setCurPhase(phase);
     // });
-    },[account, contract])
+    },[_getTokensOwed, _getTokensMinted])
 
-    // const handlePurchase = () => {
     async function handlePurchase() {
         const provider = new ethers.providers.Web3Provider(window.ethereum);
         const signer = provider.getSigner();
@@ -54,26 +68,19 @@ const InvestorPortalView = ({ account, ...props }: any) => {
             const tsx = await _contract.purchase({ value: parseEther(tokensToPurchase) });
             await tsx.wait();
             setStatusMessage("Transaction Completed");
-        } catch (e) {
-            console.error(e);
-            setStatusMessage("Transaction Failed");
+        } catch (e: any) {
+            console.log("ERROR: ", e);
+            setStatusMessage(`Transaction Failed: ${e.data.message}`);
         }
     }
-    //     contract.current.purchase({ value: parseEther(tokensToPurchase) })
-    //         .then(() => {
-    //             setStatusMessage("Transaction Completed");
-    //         })
-    //         .catch(() => {
-    //             setStatusMessage("Transaction Failed");
-    //         });
-    // };
 
   const enablePurchasing = tokensToPurchase && parseFloat(tokensToPurchase) > 0;
 
   return (
     <Container maxWidth="lg">
         <Box>{`Account: ${account}`}</Box>
-        <Box mt={1}>{`Tokens: ${numTokens}`}</Box>
+        <Box mt={1}>{`Tokens Owed: ${numTokensOwed}`}</Box>
+        <Box mt={1}>{`Tokens Minted: ${numTokensMinted}`}</Box>
       {/* <Box>{`Current Phase: ${curPhase}`}</Box> */}
         <Box mt={4}>
             <Box>
@@ -103,8 +110,10 @@ const InvestorPortal = () => {
     const [accounts, setAccounts] = useState();
 
     window.ethereum.request({ method: 'eth_accounts' })
-        .then((accounts: any) => {
-            setAccounts(accounts);
+        .then((_accounts: any) => {
+            if (!accounts) {
+                setAccounts(_accounts);
+            }
         })
         .catch((err: any) => {
             console.log("ERROR: ", err);
