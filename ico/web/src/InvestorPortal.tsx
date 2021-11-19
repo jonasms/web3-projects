@@ -25,6 +25,25 @@ const phaseMap = {
     3: "Open"
 };
 
+const parseErrorMessage = (err: any) => {
+    if (err && err.data && err.data.message) {
+        return err.data.message
+    };
+
+    if (err.message) {
+        const startIdx = err.message.indexOf("error=") + "error=".length;
+        const endIdx = err.message.indexOf(", method=");
+        const jsonString = err.message.slice(startIdx, endIdx);
+
+        try {
+             const json = JSON.parse(jsonString);
+             return json.message || "No error message.";
+        } catch {
+            return "No error message.";
+        }
+    }
+}
+
 const InvestorPortalView = ({ account, ...props }: any) => {
     const [statusMessage, setStatusMessage] = useState("");
     const [numTokensOwed, setNumTokensOwed] = useState(0);
@@ -89,7 +108,7 @@ const InvestorPortalView = ({ account, ...props }: any) => {
             console.log("ERROR: ", e);
             update();
             setTokensToPurchase("");
-            setStatusMessage(`Transaction Failed: ${e.data.message}`);
+            setStatusMessage(`Transaction Failed: ${parseErrorMessage(e)}`);
         }
     }
 
