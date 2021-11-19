@@ -1,5 +1,39 @@
 # ICO Project
 
+## Design Question
+### Question:
+The base requirements give contributors their SPC tokens immediately. How would you design your contract to vest the awarded tokens instead, i.e. award tokens to users over time?
+
+### Solution:
+The exact implementation depends on vesting details such as whether a static number of tokens vest over a period of time, or a % of tokens that vest per vesting period.
+
+In the current contract I have the following:
+```
+mapping(address => uint256) public investorToTokensOwed;
+```
+
+I would change this to:
+```
+struct Investment {
+    uint tokensOwed;
+    uint vestPerPeriod;
+}
+
+mapping(address => Investment) public investorToTokensOwed;
+```
+
+Where `vestPerPeriod` represents the exact number of tokens to vest per period.
+
+Writing to `investorToTokensOwed` would look something like:
+```
+Investment memory investment = investorToTokensOwed[msg.sender];
+uint newTokensOwed = numTokensToPurchase + investment.tokensOwed;
+uint newVestPerPeriod = newTokensOwed / 4; // 4 vesting periods, for example.
+investorToTokensOwed[msg.sender] = Investment(newTokensOwed, newVestPerPeriod)
+```
+
+I would then automate executing on the vesting period using a web2 server, most likely written in either Node or Python.
+
 ## Running in Rinkeby
 ### Set up ENV variables:
 Add the following to `/ico/.env`
