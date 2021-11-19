@@ -1,5 +1,46 @@
 # ICO Project
 
+## Running in Rinkeby
+### Set up ENV variables:
+Add the following to `/ico/.env`
+```
+INFURA_API_KEY=01e220f616c64549a5f86f8ea456ad40
+DEV_WALLET_PRIVATE_KEY=[private_key_to_a_wallet_on_the_rinkeby_network]
+```
+For `DEV_WALLET_PRIVATE_KEY` don't include `0x` -- that's included for you in the hardhat config.
+
+If you get an error about a "mnemonic", add the following to that `.env`:
+`MNEMONIC=exotic accident planet click stem age cotton treat supreme chronic ice track update talk walk`
+
+And add the following to `/ico/web/.env`
+```
+REACT_APP_CONTRACT_ADDRESS=0xc160275989DF70234d0Ae606428BCcfA5B57dBeF
+```
+
+That's the address of this contract deployed to the rinkeby network.
+
+### Interact with the contract via hardhat's console:
+```
+npx hardhat console --network rinkeby
+
+...
+
+Coin = await ethers.getContractFactory("SotanoCoin");
+c = await Coin.attach("0xc160275989DF70234d0Ae606428BCcfA5B57dBeF");
+await c.advancePhase(
+```
+
+### Deploy the contract to Rinkeby with you as the owner:
+```
+npx hardhat run scripts/deploy.js --network rinkeby
+```
+
+### Run the front end locally:
+1. From `/ico/web` run `yarn start`.
+2. If a browser window doesn't open automatically for you, navigate to `http://localhost:3000/`.
+3. Once you login via Metamask you should be redirected to `http://localhost:3000/investor`.
+
+
 ## Spec
 1. Aims to raise 30,000 ETH via an ICO
 2. Has a max total supply of 500,000 tokens.
