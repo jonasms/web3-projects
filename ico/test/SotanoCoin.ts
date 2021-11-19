@@ -216,7 +216,7 @@ describe("SotanoCoin", function () {
         });
     });
 
-    describe("Initial Token Distribution", function() {
+    describe("Initial Token Minting", function() {
         it("Should distribute all tokens owed when phase is changed to 'Open'", async function() {
             // Advance to phase 'General'
             await this.sotanoCoin.advancePhase();
@@ -229,6 +229,10 @@ describe("SotanoCoin", function () {
             expect(await this.sotanoCoin.totTokensPurchased()).to.equal(parseEther("150"));
 
             await this.sotanoCoin.advancePhase();
+
+            await this.sotanoCoin.mintTokens();
+            await this.sotanoCoin.connect(this.account2).mintTokens();
+            await this.sotanoCoin.connect(this.account3).mintTokens();
 
             expect(
                 await this.sotanoCoin.balanceOf(this.owner.address)
@@ -262,6 +266,11 @@ describe("SotanoCoin", function () {
 
             // move to Open phase
             await this.sotanoCoin.advancePhase();
+
+            await this.sotanoCoin.connect(this.account1).mintTokens();
+            await this.sotanoCoin.connect(this.account2).mintTokens();
+            await this.sotanoCoin.connect(this.account3).mintTokens();
+            await this.sotanoCoin.connect(this.account4).mintTokens();
 
             // test that treasury balance is balance + 2% of token orders
             const updatedTreasuryTokenBalance = await this.sotanoCoin.balanceOf(this.treasuryWallet.address);

@@ -10,7 +10,7 @@ import "hardhat/console.sol";
 
 contract SotanoCoin is ERC20, Ownable {
     enum Phase {
-        None,
+        Closed,
         Seed,
         General,
         Open
@@ -30,17 +30,16 @@ contract SotanoCoin is ERC20, Ownable {
     address payable private treasuryAddress;
     bool public feesEnabled;
     mapping(Phase => PhaseDetails) public phaseToDetails;
-    Phase public curPhase = Phase.None;
+    Phase public curPhase = Phase.Closed;
     bool public fundraisingPaused;
     mapping(address => bool) public whitelistedInvestors;
     mapping(address => uint256) public investorToTokensOwed;
-    address[] private investors;
     uint256 public totTokensPurchased;
 
     constructor(address payable _treasuryAddress) ERC20("Sotano", "SOT") {
         treasuryAddress = _treasuryAddress;
 
-        phaseToDetails[Phase.None] = PhaseDetails(0, 0);
+        phaseToDetails[Phase.Closed] = PhaseDetails(0, 0);
         phaseToDetails[Phase.Seed] = PhaseDetails(7500 * 10**18, 75000 * 10**18);
         phaseToDetails[Phase.General] = PhaseDetails(5000 * 10**18, MAX_ICO_RAISE);
         phaseToDetails[Phase.Open] = PhaseDetails(MAX_ICO_RAISE, MAX_ICO_RAISE);
@@ -50,7 +49,7 @@ contract SotanoCoin is ERC20, Ownable {
         @dev Qualifies requests to purchase tokens during the fundraise.
     */
     modifier meetsPhaseReqs() {
-        if (curPhase == Phase.None) {
+        if (curPhase == Phase.Closed) {
             revert("Fundraising hasn't started.");
         }
 
@@ -110,7 +109,6 @@ contract SotanoCoin is ERC20, Ownable {
             mint(msg.sender, numTokensToPurchase);
         } else {
             investorToTokensOwed[msg.sender] += numTokensToPurchase;
-            investors.push(msg.sender);
             totTokensPurchased += numTokensToPurchase;
         }
 
@@ -121,18 +119,14 @@ contract SotanoCoin is ERC20, Ownable {
     }
 
     function advancePhase() external onlyOwner {
-        if (curPhase == Phase.None) {
+        require(curPhase != Phase.Open, "Cannot advance past the 'Open' phase.");
+
+        if (curPhase == Phase.Closed) {
             curPhase = Phase.Seed;
         } else if (curPhase == Phase.Seed) {
             curPhase = Phase.General;
         } else if (curPhase == Phase.General) {
             curPhase = Phase.Open;
-
-            address investorAddress;
-            for (uint256 i = 0; i < investors.length; i++) {
-                investorAddress = investors[i];
-                mint(investorAddress, investorToTokensOwed[investorAddress]);
-            }
         }
     }
 
@@ -153,6 +147,21 @@ contract SotanoCoin is ERC20, Ownable {
     // TODO setTreasuryAddress ?
 
     /** TOKEN HANDLERS */
+    /**
+        @dev mints all tokens owed to an investor iff
+        the contract is in the 'Open' phase.
+    */
+    function mintTokens() external {
+        require(curPhase == Phase.Open, "Can only mint tokens in the 'Open' phase.");
+
+        uint256 tokensOwed = investorToTokensOwed[msg.sender];
+
+        require(tokensOwed > 0, "User doesn't have any tokens to mint.");
+
+        mint(msg.sender, tokensOwed);
+        investorToTokensOwed[msg.sender] = 0;
+    }
+
     /**
         @dev `_amount` represents tokens, not ETH.
         Transaction fees are deducted from `_amount`, not tacked on.
