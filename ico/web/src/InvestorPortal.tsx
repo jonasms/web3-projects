@@ -23,7 +23,7 @@ const InvestorPortalView = ({ account, ...props }: any) => {
     const [numTokensOwed, setNumTokensOwed] = useState(0);
     const [numTokensMinted, setNumTokensMinted] = useState(0);
     const [tokensToPurchase, setTokensToPurchase] = useState("0");
-//   const [curPhase, setCurPase] = useState();
+  const [curPhase, setCurPhase] = useState();
     const contract = useRef(props.contract).current;
 
     async function getTokensOwed() {
@@ -40,18 +40,20 @@ const InvestorPortalView = ({ account, ...props }: any) => {
         });
     }
 
+    async function getCurPhase() {
+        const phase = await contract.curPhase();
+        setCurPhase(phase);
+    }
 
     const _getTokensOwed = useCallback(getTokensOwed, [account, contract]);
     const _getTokensMinted = useCallback(getTokensMinted, [account, contract]);
+    const _getCurPhase = useCallback(getCurPhase, [contract]);
   
     useEffect(() => {
         _getTokensOwed();
         _getTokensMinted();
-    // TODO CUR PHASE
-    // contract.current.curPhase().then((phase: any) => {
-    //     setCurPhase(phase);
-    // });
-    },[_getTokensOwed, _getTokensMinted])
+        _getCurPhase();
+    }, [_getTokensOwed, _getTokensMinted, _getCurPhase]);
 
     async function handlePurchase() {
         const provider = new ethers.providers.Web3Provider(window.ethereum);
@@ -74,35 +76,55 @@ const InvestorPortalView = ({ account, ...props }: any) => {
         }
     }
 
-  const enablePurchasing = tokensToPurchase && parseFloat(tokensToPurchase) > 0;
+    async function handleMint() {
 
-  return (
-    <Container maxWidth="lg">
-        <Box>{`Account: ${account}`}</Box>
-        <Box mt={1}>{`Tokens Owed: ${numTokensOwed}`}</Box>
-        <Box mt={1}>{`Tokens Minted: ${numTokensMinted}`}</Box>
-      {/* <Box>{`Current Phase: ${curPhase}`}</Box> */}
-        <Box mt={4}>
-            <Box>
-                <TextField
-                    value={tokensToPurchase}
-                    onChange={(evt: any) => {
-                        console.log("EVENT: ", evt.target.value);
-                        setTokensToPurchase(evt.target.value);
-                    }}
-                    label="Number"
-                    type="number"
-                    InputLabelProps={{
-                        shrink: true,
-                    }}
-                />
+    }
+
+  const enablePurchasing = tokensToPurchase && parseFloat(tokensToPurchase) > 0;
+  const enableMinting = curPhase === 3 && numTokensOwed > 0;
+
+    return (
+        <Container maxWidth="lg">
+            <Box>{`Account: ${account}`}</Box>
+            <Box mt={1}>{`Tokens Owed: ${numTokensOwed}`}</Box>
+            <Box mt={1}>{`Tokens Minted: ${numTokensMinted}`}</Box>
+            {/* <Box>{`Current Phase: ${curPhase}`}</Box> */}
+            <Box mt={4}>
+                <Box>
+                    <TextField
+                        value={tokensToPurchase}
+                        onChange={(evt: any) => {
+                            console.log("EVENT: ", evt.target.value);
+                            setTokensToPurchase(evt.target.value);
+                        }}
+                        label="Number"
+                        type="number"
+                        InputLabelProps={{
+                            shrink: true,
+                        }}
+                    />
+                </Box>
+                <Box mt={1}>
+                    <Button
+                        variant="contained"
+                        disabled={!enablePurchasing}
+                        onClick={handlePurchase}
+                    >
+                        Purchase Tokens
+                    </Button>
+                </Box>
+                <Box mt={1}><Typography>{statusMessage}</Typography></Box>
             </Box>
-            <Box mt={1}>
-                <Button variant="contained" disabled={!enablePurchasing} onClick={handlePurchase}>Purchase Tokens</Button>
+            <Box mt={4}>
+                <Button
+                    variant="outlined"
+                    disabled={!enableMinting}
+                    onClick={handleMint}
+                >
+                    Mint Tokens
+                </Button>
             </Box>
-            <Box mt={1}><Typography>{statusMessage}</Typography></Box>
-        </Box>
-      </Container>
+        </Container>
     )
 }
 
