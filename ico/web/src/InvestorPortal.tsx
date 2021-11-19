@@ -18,6 +18,13 @@ declare global {
 const { utils } = ethers;
 const { parseEther, formatEther } = utils;
 
+const phaseMap = {
+    0: "Closed",
+    1: "Seed",
+    2: "General",
+    3: "Open"
+};
+
 const InvestorPortalView = ({ account, ...props }: any) => {
     const [statusMessage, setStatusMessage] = useState("");
     const [numTokensOwed, setNumTokensOwed] = useState(0);
@@ -45,6 +52,12 @@ const InvestorPortalView = ({ account, ...props }: any) => {
         setCurPhase(phase);
     }
 
+    const update = () => {
+        getTokensOwed()
+        getTokensMinted();
+        getCurPhase();
+    }
+
     const _getTokensOwed = useCallback(getTokensOwed, [account, contract]);
     const _getTokensMinted = useCallback(getTokensMinted, [account, contract]);
     const _getCurPhase = useCallback(getCurPhase, [contract]);
@@ -69,15 +82,34 @@ const InvestorPortalView = ({ account, ...props }: any) => {
         try {
             const tsx = await _contract.purchase({ value: parseEther(tokensToPurchase) });
             await tsx.wait();
+            update();
+            setTokensToPurchase("");
             setStatusMessage("Transaction Completed");
         } catch (e: any) {
             console.log("ERROR: ", e);
+            update();
+            setTokensToPurchase("");
             setStatusMessage(`Transaction Failed: ${e.data.message}`);
         }
     }
 
     async function handleMint() {
+        const provider = new ethers.providers.Web3Provider(window.ethereum);
+        const signer = provider.getSigner();
+        const _contract = new ethers.Contract(
+            SOTANOCOIN_ICO_CONTRACT!,
+            SotanoCoinJSON.abi,
+            signer
+        );
 
+        try {
+            const tsx = await _contract.mintTokens();
+            await tsx.wait();
+            update();
+        } catch (e: any) {
+            console.log("ERROR: ", e);
+            update();
+        }
     }
 
   const enablePurchasing = tokensToPurchase && parseFloat(tokensToPurchase) > 0;
@@ -88,7 +120,7 @@ const InvestorPortalView = ({ account, ...props }: any) => {
             <Box>{`Account: ${account}`}</Box>
             <Box mt={1}>{`Tokens Owed: ${numTokensOwed}`}</Box>
             <Box mt={1}>{`Tokens Minted: ${numTokensMinted}`}</Box>
-            {/* <Box>{`Current Phase: ${curPhase}`}</Box> */}
+            <Box mt={1}>{`Current Phase: ${(curPhase || curPhase === 0) && phaseMap[curPhase]}`}</Box>
             <Box mt={4}>
                 <Box>
                     <TextField
