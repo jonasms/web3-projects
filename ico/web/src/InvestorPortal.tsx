@@ -118,7 +118,7 @@ const InvestorPortalView = ({ account, ...props }: any) => {
     return (
         <Container maxWidth="lg">
             <Box>{`Account: ${account}`}</Box>
-            <Box mt={1}>{`Tokens Owed: ${numTokensOwed}`}</Box>
+            <Box mt={1}>{`Tokens Unminted: ${numTokensOwed}`}</Box>
             <Box mt={1}>{`Tokens Minted: ${numTokensMinted}`}</Box>
             <Box mt={1}>{`Current Phase: ${(curPhase || curPhase === 0) && phaseMap[curPhase]}`}</Box>
             <Box mt={4}>

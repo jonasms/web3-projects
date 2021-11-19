@@ -5,9 +5,6 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-// TODO REMOVE
-import "hardhat/console.sol";
-
 contract SotanoCoin is ERC20, Ownable {
     enum Phase {
         Closed,
@@ -21,17 +18,16 @@ contract SotanoCoin is ERC20, Ownable {
         uint256 totalTokenLimit;
     }
 
-    // TODO reconsider accessiblity of each var
     uint256 private constant MAX_TOTAL_SUPPLY = 500000 * 10**18;
     uint256 private constant MAX_ICO_RAISE = 150000 * 10**18;
     uint256 private constant EXCHANGE_RATE = 5;
     // note: 2% is equiv. to 1/50 -- divide tokens by TAX_RATE to get 2%
     uint256 private constant TAX_RATE = 50;
     address payable private treasuryAddress;
-    bool public feesEnabled;
-    mapping(Phase => PhaseDetails) public phaseToDetails;
+    bool private feesEnabled;
+    mapping(Phase => PhaseDetails) private phaseToDetails;
     Phase public curPhase = Phase.Closed;
-    bool public fundraisingPaused;
+    bool private fundraisingPaused;
     mapping(address => bool) public whitelistedInvestors;
     mapping(address => uint256) public investorToTokensOwed;
     uint256 public totTokensPurchased;
@@ -57,8 +53,7 @@ contract SotanoCoin is ERC20, Ownable {
             revert("Purchasing tokens has been paused.");
         }
 
-        // TODO confirm that `storage` uses less gas than `memory` here.
-        PhaseDetails storage phase = phaseToDetails[curPhase];
+        PhaseDetails memory phase = phaseToDetails[curPhase];
         if (curPhase == Phase.Seed && !whitelistedInvestors[msg.sender]) {
             revert("Purchaser is not whitelisted.");
         }
@@ -79,8 +74,7 @@ contract SotanoCoin is ERC20, Ownable {
         @dev
     */
     function purchase() external payable meetsPhaseReqs {
-        // TODO confirm that `storage` uses less gas than `memory` here.
-        PhaseDetails storage phase = phaseToDetails[curPhase];
+        PhaseDetails memory phase = phaseToDetails[curPhase];
         uint256 tokensOwedTo = investorToTokensOwed[msg.sender];
 
         /**
@@ -88,7 +82,7 @@ contract SotanoCoin is ERC20, Ownable {
             the lower of the total and individual limits.
         */
         uint256 tokenPurchaseLimit = Math.min(
-            phase.totalTokenLimit - getNumTokensOutstanding(), // TODO change name; "Purchased" to "Owed"?
+            phase.totalTokenLimit - getNumTokensOutstanding(),
             phase.individualTokenLimit - tokensOwedTo
         );
 
@@ -143,8 +137,6 @@ contract SotanoCoin is ERC20, Ownable {
     function toggleFundraising() external onlyOwner {
         fundraisingPaused = !fundraisingPaused;
     }
-
-    // TODO setTreasuryAddress ?
 
     /** TOKEN HANDLERS */
     /**
