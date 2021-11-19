@@ -34,6 +34,7 @@ investorToTokensOwed[msg.sender] = Investment(newTokensOwed, newVestPerPeriod)
 
 I would then automate executing on the vesting period using a web2 server, most likely written in either Node or Python.
 
+
 ## Running in Rinkeby
 ### Set up ENV variables:
 Add the following to `/ico/.env`
@@ -53,6 +54,11 @@ REACT_APP_CONTRACT_ADDRESS=0xc160275989DF70234d0Ae606428BCcfA5B57dBeF
 
 That's the address of this contract deployed to the rinkeby network.
 
+### Run the front end locally:
+1. From `/ico/web` run `yarn start`.
+2. If a browser window doesn't open automatically for you, navigate to `http://localhost:3000/`.
+3. Once you login via Metamask you should be redirected to `http://localhost:3000/investor`.
+
 ### Interact with the contract via hardhat's console:
 ```
 npx hardhat console --network rinkeby
@@ -68,11 +74,6 @@ await c.advancePhase(
 ```
 npx hardhat run scripts/deploy.js --network rinkeby
 ```
-
-### Run the front end locally:
-1. From `/ico/web` run `yarn start`.
-2. If a browser window doesn't open automatically for you, navigate to `http://localhost:3000/`.
-3. Once you login via Metamask you should be redirected to `http://localhost:3000/investor`.
 
 
 ## Spec
