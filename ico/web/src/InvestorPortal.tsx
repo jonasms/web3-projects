@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { ethers } from "ethers"
-import Container from '@mui/material/Container';
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { ethers } from "ethers";
+import Container from "@mui/material/Container";
 import Box from "@mui/material/Box";
 import TextField from "@mui/material/TextField";
 import Button from "@mui/material/Button";
@@ -12,7 +12,9 @@ console.log("ADDRESS: ", process.env.REACT_APP_CONTRACT_ADDRESS);
 //"0x093568B8e4812f1D252e0FD6573c745aB8B765Ca";
 
 declare global {
-  interface Window { ethereum: any; }
+    interface Window {
+        ethereum: any;
+    }
 }
 
 const { utils } = ethers;
@@ -22,13 +24,13 @@ const phaseMap = {
     0: "Closed",
     1: "Seed",
     2: "General",
-    3: "Open"
+    3: "Open",
 };
 
 const parseErrorMessage = (err: any) => {
     if (err && err.data && err.data.message) {
-        return err.data.message
-    };
+        return err.data.message;
+    }
 
     if (err.message) {
         const startIdx = err.message.indexOf("error=") + "error=".length;
@@ -36,20 +38,20 @@ const parseErrorMessage = (err: any) => {
         const jsonString = err.message.slice(startIdx, endIdx);
 
         try {
-             const json = JSON.parse(jsonString);
-             return json.message || "No error message.";
+            const json = JSON.parse(jsonString);
+            return json.message || "No error message.";
         } catch {
             return "No error message.";
         }
     }
-}
+};
 
 const InvestorPortalView = ({ account, ...props }: any) => {
     const [statusMessage, setStatusMessage] = useState("");
     const [numTokensOwed, setNumTokensOwed] = useState(0);
     const [numTokensMinted, setNumTokensMinted] = useState(0);
     const [tokensToPurchase, setTokensToPurchase] = useState("0");
-  const [curPhase, setCurPhase] = useState();
+    const [curPhase, setCurPhase] = useState();
     const contract = useRef(props.contract).current;
 
     async function getTokensOwed() {
@@ -72,15 +74,15 @@ const InvestorPortalView = ({ account, ...props }: any) => {
     }
 
     const update = () => {
-        getTokensOwed()
+        getTokensOwed();
         getTokensMinted();
         getCurPhase();
-    }
+    };
 
     const _getTokensOwed = useCallback(getTokensOwed, [account, contract]);
     const _getTokensMinted = useCallback(getTokensMinted, [account, contract]);
     const _getCurPhase = useCallback(getCurPhase, [contract]);
-  
+
     useEffect(() => {
         _getTokensOwed();
         _getTokensMinted();
@@ -90,11 +92,7 @@ const InvestorPortalView = ({ account, ...props }: any) => {
     async function handlePurchase() {
         const provider = new ethers.providers.Web3Provider(window.ethereum);
         const signer = provider.getSigner();
-        const _contract = new ethers.Contract(
-            SOTANOCOIN_ICO_CONTRACT!,
-            SotanoCoinJSON.abi,
-            signer
-        );
+        const _contract = new ethers.Contract(SOTANOCOIN_ICO_CONTRACT!, SotanoCoinJSON.abi, signer);
 
         console.log("PURCHASING TOKENS: ", parseEther(tokensToPurchase));
 
@@ -115,11 +113,7 @@ const InvestorPortalView = ({ account, ...props }: any) => {
     async function handleMint() {
         const provider = new ethers.providers.Web3Provider(window.ethereum);
         const signer = provider.getSigner();
-        const _contract = new ethers.Contract(
-            SOTANOCOIN_ICO_CONTRACT!,
-            SotanoCoinJSON.abi,
-            signer
-        );
+        const _contract = new ethers.Contract(SOTANOCOIN_ICO_CONTRACT!, SotanoCoinJSON.abi, signer);
 
         try {
             const tsx = await _contract.mintTokens();
@@ -131,8 +125,8 @@ const InvestorPortalView = ({ account, ...props }: any) => {
         }
     }
 
-  const enablePurchasing = tokensToPurchase && parseFloat(tokensToPurchase) > 0;
-  const enableMinting = curPhase === 3 && numTokensOwed > 0;
+    const enablePurchasing = tokensToPurchase && parseFloat(tokensToPurchase) > 0;
+    const enableMinting = curPhase === 3 && numTokensOwed > 0;
 
     return (
         <Container maxWidth="lg">
@@ -156,33 +150,28 @@ const InvestorPortalView = ({ account, ...props }: any) => {
                     />
                 </Box>
                 <Box mt={1}>
-                    <Button
-                        variant="contained"
-                        disabled={!enablePurchasing}
-                        onClick={handlePurchase}
-                    >
+                    <Button variant="contained" disabled={!enablePurchasing} onClick={handlePurchase}>
                         Purchase Tokens
                     </Button>
                 </Box>
-                <Box mt={1}><Typography>{statusMessage}</Typography></Box>
+                <Box mt={1}>
+                    <Typography>{statusMessage}</Typography>
+                </Box>
             </Box>
             <Box mt={4}>
-                <Button
-                    variant="outlined"
-                    disabled={!enableMinting}
-                    onClick={handleMint}
-                >
+                <Button variant="outlined" disabled={!enableMinting} onClick={handleMint}>
                     Mint Tokens
                 </Button>
             </Box>
         </Container>
-    )
-}
+    );
+};
 
 const InvestorPortal = () => {
     const [accounts, setAccounts] = useState();
 
-    window.ethereum.request({ method: 'eth_accounts' })
+    window.ethereum
+        .request({ method: "eth_accounts" })
         .then((_accounts: any) => {
             if (!accounts) {
                 setAccounts(_accounts);
@@ -193,16 +182,11 @@ const InvestorPortal = () => {
         });
 
     const provider = new ethers.providers.Web3Provider(window.ethereum);
-        //   const signer = provider.getSigner();
+    //   const signer = provider.getSigner();
     const contract = new ethers.Contract(SOTANOCOIN_ICO_CONTRACT!, SotanoCoinJSON.abi, provider);
-        
-
-
 
     // @ts-ignore
-    return accounts && accounts.length
-        ? <InvestorPortalView account={accounts[0]} contract={contract} />
-        : null;
-}
+    return accounts && accounts.length ? <InvestorPortalView account={accounts[0]} contract={contract} /> : null;
+};
 
 export default InvestorPortal;
