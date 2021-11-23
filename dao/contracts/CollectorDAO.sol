@@ -73,4 +73,11 @@ contract CollectorDAO is CollectorBase {
             description
         );
     }
+
+    function buyMembership() external payable {
+        require(!members[msg.sender], "Already a member.");
+        require(msg.value == 1 ether, "Membership costs exactly 1 ETH.");
+
+        members[msg.sender] = true;
+    }
 }
