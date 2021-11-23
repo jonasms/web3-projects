@@ -7,10 +7,9 @@ import "./CollectorBase.sol";
 import "hardhat/console.sol";
 
 contract CollectorDAO is CollectorBase {
-    address guardian;
+    address public guardian;
     mapping(uint256 => Proposal) public proposals;
-    mapping(address => bool) members;
-    uint256 membershipFeeCollected;
+    mapping(address => bool) public members;
 
     constructor() {
         // TODO send guardian_ in as a param
