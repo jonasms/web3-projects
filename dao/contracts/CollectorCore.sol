@@ -34,4 +34,21 @@ contract CollectorCore {
         EXPIRED,
         EXECUTED
     }
+
+    event ProposalCreated(
+        uint256 id,
+        address proposer,
+        address[] targets,
+        uint256[] values,
+        string[] signatures,
+        bytes[] calldatas,
+        uint256 startBlock,
+        uint256 endBlock,
+        string description
+    );
+
+    function _votingPeriod() internal pure returns (uint256) {
+        // ~3 days in blocks (assuming 15s blocks)
+        return 17280;
+    }
 }
