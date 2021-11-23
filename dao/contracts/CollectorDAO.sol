@@ -34,9 +34,9 @@ contract CollectorDAO is CollectorBase {
         string memory description_
     ) external returns (uint256) {
         require(members[msg.sender], "Only members can vote.");
-        require(targets_.length == values_.length, "");
-        require(targets_.length == signatures_.length, "");
-        require(targets_.length == calldatas_.length, "");
+        require(targets_.length == values_.length, "Proposal function information arity mismatch; values");
+        require(targets_.length == signatures_.length, "Proposal function information arity mismatch; signatures");
+        require(targets_.length == calldatas_.length, "Proposal function information arity mismatch; calldatas");
 
         uint256 proposalId = _hashProposal(targets_, values_, signatures_, calldatas_, keccak256(bytes(description_)));
 
@@ -72,6 +72,7 @@ contract CollectorDAO is CollectorBase {
             description_
         );
 
+        console.log("PROPOSAL_ID: ", proposalId);
         return proposalId;
     }
 
