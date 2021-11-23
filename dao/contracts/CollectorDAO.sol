@@ -7,10 +7,20 @@ import "./CollectorBase.sol";
 import "hardhat/console.sol";
 
 contract CollectorDAO is CollectorBase {
+    /// @notice The EIP-712 typehash for the contract's domain
+    bytes32 public constant DOMAIN_TYPEHASH =
+        keccak256("EIP712Domain(string name,uint256 chainId,address verifyingContract)");
+
+    /// @notice The EIP-712 typehash for the ballot struct used by the contract
+    bytes32 public constant BALLOT_TYPEHASH = keccak256("Ballot(uint256 proposalId,bool support)");
+
+    string public constant name = "Collector DAO Governor";
+
     address public guardian;
-    mapping(uint256 => Proposal) public proposals;
+
     /// @notice The latest proposal for each proposer
     mapping(address => uint256) public latestProposalIds;
+    mapping(uint256 => Proposal) public proposals;
     mapping(address => bool) public members;
 
     constructor() {
@@ -77,6 +87,52 @@ contract CollectorDAO is CollectorBase {
 
         return proposalId;
     }
+
+    function _castVote(
+        uint256 proposalId,
+        uint8 support,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) internal {
+        // TODO require proposal is active
+
+        /* Get Signer */
+        bytes32 domainSeparator = keccak256(
+            abi.encode(DOMAIN_TYPEHASH, keccak256(bytes(name)), getChainId(), address(this))
+        );
+        bytes32 structHash = keccak256(abi.encode(BALLOT_TYPEHASH, proposalId, support));
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
+        address signer = ecrecover(digest, v, r, s);
+
+        // TODO do all invalid signatures resolve to address(0)?
+        require(signer != address(0), "castVote: invalid signature");
+        require(members[signer], "castVote: signer is not a member");
+
+        /* Cast Vote */
+        // get proposal
+        Proposal storage proposal = proposals[proposalId];
+        // insure hasn't voted by checking proposal receipt
+        Receipt storage receipt = proposal.receipts[signer];
+        require(!receipt.hasVoted, "castVote: signer has already cast a vote.");
+        // add vote
+
+        if (support == uint8(Support.AGAINST)) {
+            proposal.againstVotes++;
+        } else if (support == uint8(Support.FOR)) {
+            proposal.forVotes++;
+        } else if (support == uint8(Support.ABSTAIN)) {
+            proposal.abstainVotes++;
+        }
+
+        receipt.hasVoted = true;
+        receipt.support = support;
+
+        // TODO emit event
+    }
+
+    // TODO
+    function castVotesBulk() public {}
 
     function buyMembership() external payable {
         require(!members[msg.sender], "Already a member.");

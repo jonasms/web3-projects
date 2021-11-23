@@ -40,7 +40,7 @@ describe("CollectorDAO", function () {
       expect(await this.dao.members(this.owner.address)).to.equal(false);
     });
 
-    describe("Propose", function () {
+    describe("Create Proposal", function () {
       beforeEach(async function () {
         await this.dao.buyMembership({ value: parseEther("1") });
       });

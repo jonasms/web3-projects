@@ -36,6 +36,12 @@ contract CollectorBase {
         EXECUTED
     }
 
+    enum Support {
+        AGAINST,
+        FOR,
+        ABSTAIN
+    }
+
     event ProposalCreated(
         uint256 id,
         address proposer,
@@ -47,6 +53,14 @@ contract CollectorBase {
         uint256 endBlock,
         string description
     );
+
+    function getChainId() internal view returns (uint256) {
+        uint256 chainId;
+        assembly {
+            chainId := chainid()
+        }
+        return chainId;
+    }
 
     function _votingPeriod() internal pure returns (uint256) {
         // ~3 days in blocks (assuming 15s blocks)
