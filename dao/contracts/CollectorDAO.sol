@@ -23,7 +23,7 @@ contract CollectorDAO is CollectorBase {
         string[] memory signatures,
         bytes[] memory calldatas,
         bytes32 descriptionHash
-    ) internal returns (uint256) {
+    ) internal pure returns (uint256) {
         return uint256(keccak256(abi.encode(targets, values, signatures, calldatas, descriptionHash)));
     }
 
@@ -36,15 +36,15 @@ contract CollectorDAO is CollectorBase {
     ) external returns (uint256) {
         require(members[msg.sender], "Only members can vote.");
         require(targets_.length == values_.length, "");
-        require(tagets.length == signatures_.length, "");
-        require(target.length == calldatas_.length, "");
+        require(targets_.length == signatures_.length, "");
+        require(targets_.length == calldatas_.length, "");
 
-        uint256 proposalId = _hasProposal(targets_, values_, signatures_, calldatas_, keccak256(bytes(description_)));
+        uint256 proposalId = _hashProposal(targets_, values_, signatures_, calldatas_, keccak256(bytes(description_)));
 
         Proposal storage proposal = proposals[proposalId]; // creates proposal
         require(proposal.startBlock == 0, "This proposal already exists.");
 
-        uint256 endBlock = block.number + votingDelay();
+        uint256 endBlock = block.number + _votingPeriod();
 
         proposal.id = proposalId;
         proposal.proposer = msg.sender;
@@ -70,8 +70,10 @@ contract CollectorDAO is CollectorBase {
             calldatas_,
             block.number,
             endBlock,
-            description
+            description_
         );
+
+        return proposalId;
     }
 
     function buyMembership() external payable {
