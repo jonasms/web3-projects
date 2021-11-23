@@ -9,6 +9,8 @@ import "hardhat/console.sol";
 contract CollectorDAO is CollectorBase {
     address public guardian;
     mapping(uint256 => Proposal) public proposals;
+    /// @notice The latest proposal for each proposer
+    mapping(address => uint256) public latestProposalIds;
     mapping(address => bool) public members;
 
     constructor() {
@@ -42,6 +44,7 @@ contract CollectorDAO is CollectorBase {
 
         Proposal storage proposal = proposals[proposalId]; // creates proposal
         require(proposal.startBlock == 0, "This proposal already exists.");
+        latestProposalIds[msg.sender] = proposalId;
 
         uint256 endBlock = block.number + _votingPeriod();
 
@@ -72,7 +75,6 @@ contract CollectorDAO is CollectorBase {
             description_
         );
 
-        console.log("PROPOSAL_ID: ", proposalId);
         return proposalId;
     }
 

@@ -19,6 +19,7 @@ contract CollectorBase {
         uint256 endBlock;
         uint256 forVotes;
         uint256 againstVotes;
+        uint256 abstainVotes;
         bool canceled;
         bool executed;
         mapping(address => Receipt) receipts;

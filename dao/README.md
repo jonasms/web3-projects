@@ -124,7 +124,7 @@ function \_castVote(address voter, uint proposalId, bool support) internal {
 
 function castVote (address voter, uint proposalId, bool support) external {
 
-    castVote(msg.sender, proposalId, support)
+    \_castVote(msg.sender, proposalId, support)
 
 }
 
