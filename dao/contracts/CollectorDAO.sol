@@ -89,18 +89,12 @@ contract CollectorDAO is CollectorBase {
 
         proposal.id = proposalId;
         proposal.proposer = msg.sender;
-        // eta = 0; // TODO ??
         proposal.targets = targets_;
         proposal.values = values_;
         proposal.signatures = signatures_;
         proposal.calldatas = calldatas_;
         proposal.startBlock = block.number;
         proposal.endBlock = endBlock;
-        // forVotes: 0;
-        // againstVotes: 0;
-        // abstainVotes: 0;
-        // canceled: false;
-        // executed: false
 
         emit ProposalCreated(
             proposalId,
@@ -175,6 +169,19 @@ contract CollectorDAO is CollectorBase {
 
         for (uint256 i = 0; i < proposalIdList_.length; i++) {
             _castVote(proposalIdList_[i], supportList_[i], vList_[i], rList_[i], sList_[i]);
+        }
+    }
+
+    // TODO test how payable works here
+    function execute(uint256 proposalId_) external payable {
+        require(state(proposalId_) == ProposalState.QUEUED, "execute: proposal must be queued");
+
+        Proposal storage proposal = proposals[proposalId_];
+        proposal.executed = true;
+
+        for (uint256 i = 0; i < proposal.targets.length; i++) {
+            (bool success, ) = proposal.targets[i].call{ value: proposal.values[i] }(proposal.calldatas[i]);
+            require(success, "execute: call failed");
         }
     }
 
