@@ -54,6 +54,8 @@ contract CollectorBase {
         string description
     );
 
+    event VoteCast(address signer, uint256 proposalId, uint8 support);
+
     function getChainId() internal view returns (uint256) {
         uint256 chainId;
         assembly {

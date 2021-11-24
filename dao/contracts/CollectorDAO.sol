@@ -110,12 +110,9 @@ contract CollectorDAO is CollectorBase {
         require(members[signer], "castVote: signer is not a member");
 
         /* Cast Vote */
-        // get proposal
         Proposal storage proposal = proposals[proposalId_];
-        // insure hasn't voted by checking proposal receipt
         Receipt storage receipt = proposal.receipts[signer];
         require(!receipt.hasVoted, "castVote: signer has already cast a vote.");
-        // add vote
 
         if (support_ == uint8(Support.AGAINST)) {
             proposal.againstVotes++;
@@ -128,7 +125,7 @@ contract CollectorDAO is CollectorBase {
         receipt.hasVoted = true;
         receipt.support = support_;
 
-        // TODO emit event
+        emit VoteCast(signer, proposalId_, support);
     }
 
     function castVotesBulk(
