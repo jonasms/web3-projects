@@ -45,10 +45,10 @@ contract CollectorDAO is CollectorBase {
         bytes[] memory calldatas_,
         string memory description_
     ) external returns (uint256) {
-        require(members[msg.sender], "Only members can vote.");
-        require(targets_.length == values_.length, "Proposal function information arity mismatch; values");
-        require(targets_.length == signatures_.length, "Proposal function information arity mismatch; signatures");
-        require(targets_.length == calldatas_.length, "Proposal function information arity mismatch; calldatas");
+        require(members[msg.sender], "propose: Only members can vote.");
+        require(targets_.length == values_.length, "propose: information arity mismatch; values");
+        require(targets_.length == signatures_.length, "propose: information arity mismatch; signatures");
+        require(targets_.length == calldatas_.length, "propose: information arity mismatch; calldatas");
 
         uint256 proposalId = _hashProposal(targets_, values_, signatures_, calldatas_, keccak256(bytes(description_)));
 
@@ -89,11 +89,11 @@ contract CollectorDAO is CollectorBase {
     }
 
     function _castVote(
-        uint256 proposalId,
-        uint8 support,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
+        uint256 proposalId_,
+        uint8 support_,
+        uint8 v_,
+        bytes32 r_,
+        bytes32 s_
     ) internal {
         // TODO require proposal is active
 
@@ -101,9 +101,9 @@ contract CollectorDAO is CollectorBase {
         bytes32 domainSeparator = keccak256(
             abi.encode(DOMAIN_TYPEHASH, keccak256(bytes(name)), getChainId(), address(this))
         );
-        bytes32 structHash = keccak256(abi.encode(BALLOT_TYPEHASH, proposalId, support));
+        bytes32 structHash = keccak256(abi.encode(BALLOT_TYPEHASH, proposalId_, support_));
         bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
-        address signer = ecrecover(digest, v, r, s);
+        address signer = ecrecover(digest, v_, r_, s_);
 
         // TODO do all invalid signatures resolve to address(0)?
         require(signer != address(0), "castVote: invalid signature");
@@ -111,28 +111,45 @@ contract CollectorDAO is CollectorBase {
 
         /* Cast Vote */
         // get proposal
-        Proposal storage proposal = proposals[proposalId];
+        Proposal storage proposal = proposals[proposalId_];
         // insure hasn't voted by checking proposal receipt
         Receipt storage receipt = proposal.receipts[signer];
         require(!receipt.hasVoted, "castVote: signer has already cast a vote.");
         // add vote
 
-        if (support == uint8(Support.AGAINST)) {
+        if (support_ == uint8(Support.AGAINST)) {
             proposal.againstVotes++;
-        } else if (support == uint8(Support.FOR)) {
+        } else if (support_ == uint8(Support.FOR)) {
             proposal.forVotes++;
-        } else if (support == uint8(Support.ABSTAIN)) {
+        } else if (support_ == uint8(Support.ABSTAIN)) {
             proposal.abstainVotes++;
         }
 
         receipt.hasVoted = true;
-        receipt.support = support;
+        receipt.support = support_;
 
         // TODO emit event
     }
 
-    // TODO
-    function castVotesBulk() public {}
+    function castVotesBulk(
+        uint256[] calldata proposalIdList_,
+        uint8[] calldata supportList_,
+        uint8[] calldata vList_,
+        bytes32[] calldata rList_,
+        bytes32[] calldata sList_
+    ) public {
+        require(
+            proposalIdList_.length == supportList_.length,
+            "castVotesBulk: information arity mismatch; supportList"
+        );
+        require(proposalIdList_.length == vList_.length, "castVotesBulk: information arity mismatch; vList");
+        require(proposalIdList_.length == rList_.length, "castVotesBulk: information arity mismatch; rList");
+        require(proposalIdList_.length == sList_.length, "castVotesBulk: information arity mismatch; sList");
+
+        for (uint256 i = 0; i < proposalIdList_.length; i++) {
+            _castVote(proposalIdList_[i], supportList_[i], vList_[i], rList_[i], sList_[i]);
+        }
+    }
 
     function buyMembership() external payable {
         require(!members[msg.sender], "Already a member.");
