@@ -29,7 +29,7 @@ contract CollectorDAO is CollectorBase {
         guardian = msg.sender;
     }
 
-    function _quorum() internal view {
+    function _quorum() internal view returns (uint24) {
         // Avoiding loss of precision
         return (memberCount * 100) / 25;
     }
@@ -46,9 +46,9 @@ contract CollectorDAO is CollectorBase {
             return ProposalState.PENDING;
         } else if (block.number <= proposal.endBlock) {
             return ProposalState.ACTIVE;
-        } else if (proposal.forVotes <= _quorum() || proposal.forVotes <= againstVotes) {
+        } else if (proposal.forVotes <= _quorum() || proposal.forVotes <= proposal.againstVotes) {
             return ProposalState.DEFEATED;
-        } else if (eta == 0) {
+        } else if (proposal.eta == 0) {
             return ProposalState.SUCCEEDED;
         } else if (block.timestamp > proposal.eta) {
             return ProposalState.EXPIRED;
@@ -155,7 +155,7 @@ contract CollectorDAO is CollectorBase {
         receipt.hasVoted = true;
         receipt.support = support_;
 
-        emit VoteCast(signer, proposalId_, support);
+        emit VoteCast(signer, proposalId_, support_);
     }
 
     function castVotesBulk(
