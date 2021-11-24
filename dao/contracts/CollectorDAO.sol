@@ -22,7 +22,7 @@ contract CollectorDAO is CollectorBase {
     mapping(address => uint256) public latestProposalIds;
     mapping(uint256 => Proposal) public proposals;
     mapping(address => bool) public members;
-    uint24 memberCount; // TODO can be less than uint256
+    uint24 memberCount;
 
     constructor() {
         // TODO send guardian_ in as a param
@@ -30,7 +30,8 @@ contract CollectorDAO is CollectorBase {
     }
 
     function _quorum() internal view {
-        return memberCount / 4; // TODO make this math safe
+        // Avoiding loss of precision
+        return (memberCount * 100) / 25;
     }
 
     function state(uint256 proposalId_) public view returns (ProposalState) {
