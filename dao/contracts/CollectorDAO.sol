@@ -22,10 +22,38 @@ contract CollectorDAO is CollectorBase {
     mapping(address => uint256) public latestProposalIds;
     mapping(uint256 => Proposal) public proposals;
     mapping(address => bool) public members;
+    uint24 memberCount; // TODO can be less than uint256
 
     constructor() {
         // TODO send guardian_ in as a param
         guardian = msg.sender;
+    }
+
+    function _quorum() internal view {
+        return memberCount / 4; // TODO make this math safe
+    }
+
+    function state(uint256 proposalId_) public view returns (ProposalState) {
+        Proposal storage proposal = proposals[proposalId_];
+
+        if (proposal.canceled) {
+            // TODO need to create method for canceling if not extra feature
+            return ProposalState.CANCELED;
+        } else if (proposal.executed) {
+            return ProposalState.EXECUTED;
+        } else if (block.number < proposal.startBlock) {
+            return ProposalState.PENDING;
+        } else if (block.number <= proposal.endBlock) {
+            return ProposalState.ACTIVE;
+        } else if (proposal.forVotes <= _quorum() || proposal.forVotes <= againstVotes) {
+            return ProposalState.DEFEATED;
+        } else if (eta == 0) {
+            return ProposalState.SUCCEEDED;
+        } else if (block.timestamp > proposal.eta) {
+            return ProposalState.EXPIRED;
+        } else {
+            return ProposalState.QUEUED;
+        }
     }
 
     function _hashProposal(
@@ -96,6 +124,7 @@ contract CollectorDAO is CollectorBase {
         bytes32 s_
     ) internal {
         // TODO require proposal is active
+        require(state(proposalId_) == ProposalState.ACTIVE, "_castVote: proposal is not active.");
 
         /* Get Signer */
         bytes32 domainSeparator = keccak256(
@@ -153,5 +182,6 @@ contract CollectorDAO is CollectorBase {
         require(msg.value == 1 ether, "Membership costs exactly 1 ETH.");
 
         members[msg.sender] = true;
+        memberCount++;
     }
 }
