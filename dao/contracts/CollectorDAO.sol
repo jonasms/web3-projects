@@ -23,6 +23,7 @@ contract CollectorDAO is CollectorBase {
     mapping(uint256 => Proposal) public proposals;
     mapping(address => bool) public members;
     uint24 memberCount;
+    uint24 numProposals;
 
     constructor() {
         // TODO send guardian_ in as a param
@@ -79,11 +80,16 @@ contract CollectorDAO is CollectorBase {
         require(targets_.length == signatures_.length, "propose: information arity mismatch; signatures");
         require(targets_.length == calldatas_.length, "propose: information arity mismatch; calldatas");
 
-        uint256 proposalId = _hashProposal(targets_, values_, signatures_, calldatas_, keccak256(bytes(description_)));
+        // TODO this does not create a deterministic hash
+        // uint256 proposalId = _hashProposal(targets_, values_, signatures_, calldatas_, keccak256(bytes(description_)));
+        uint256 proposalId = numProposals;
+        numProposals++;
 
         Proposal storage proposal = proposals[proposalId]; // creates proposal
+        // TODO this check not functioning
         require(proposal.startBlock == 0, "This proposal already exists.");
         latestProposalIds[msg.sender] = proposalId;
+        console.log("PROPOSAL ID: ", proposalId);
 
         uint256 endBlock = block.number + _votingPeriod();
 
@@ -119,7 +125,7 @@ contract CollectorDAO is CollectorBase {
         bytes32 s_
     ) internal {
         // TODO require proposal is active
-        require(state(proposalId_) == ProposalState.ACTIVE, "_castVote: proposal is not active.");
+        // require(state(proposalId_) == ProposalState.ACTIVE, "_castVote: proposal is not active.");
 
         /* Get Signer */
         bytes32 domainSeparator = keccak256(
@@ -127,7 +133,13 @@ contract CollectorDAO is CollectorBase {
         );
         bytes32 structHash = keccak256(abi.encode(BALLOT_TYPEHASH, proposalId_, support_));
         bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
+
+        // bytes32 hash = keccak256(abi.encode(support_));
+        // bytes32 digest = keccak256(abi.encodePacked("\x19\x01", hash));
+        // bytes32 digest = keccak256(abi.encodePacked(bytes1(0x19), bytes1(0), keccak256(abi.encode(support_))));
         address signer = ecrecover(digest, v_, r_, s_);
+
+        console.log("SIGNER ADDRESS: ", signer);
 
         // TODO do all invalid signatures resolve to address(0)?
         require(signer != address(0), "castVote: invalid signature");
