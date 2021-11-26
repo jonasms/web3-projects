@@ -193,6 +193,12 @@ contract CollectorDAO is CollectorBase {
         }
     }
 
+    function getVoteRecord(uint256 proposalId_, address voter_) external view returns (Receipt memory receipt) {
+        // TODO: return proposals[proposalId_].receipts[voter_] ??
+        Proposal storage proposal = proposals[proposalId_];
+        return proposal.receipts[voter_];
+    }
+
     function buyMembership() external payable {
         require(!members[msg.sender], "Already a member.");
         require(msg.value == 1 ether, "Membership costs exactly 1 ETH.");

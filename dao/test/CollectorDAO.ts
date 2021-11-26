@@ -4,7 +4,6 @@ import type { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signe
 
 import type { CollectorDAO } from "../src/types/CollectorDAO";
 import { expect } from "chai";
-import { signTypedData, SignTypedDataVersion, recoverTypedSignature } from "@metamask/eth-sig-util";
 
 const { utils } = ethers;
 const { parseEther, randomBytes, keccak256 } = utils;
@@ -93,50 +92,129 @@ describe("CollectorDAO", function () {
       };
 
       let proposalId: string;
-      let chainId: number;
+      let types: any;
+      let domain: any;
 
       beforeEach(async function () {
-        await this.dao.connect(wallet).buyMembership({ value: parseEther("1") });
+        await this.dao.buyMembership({ value: parseEther("1") });
+        await this.dao.connect(this.account1).buyMembership({ value: parseEther("1") });
         const proposal = {
-          targets: [this.account2.address], // TODO replace w/ test nftMarketplace contract address,
+          targets: [this.account3.address], // TODO replace w/ test nftMarketplace contract address,
           values: [parseEther("1")],
           signatures: ["buyNFT(uint id, uint value)"],
           calldatas: [randomBytes(64)],
           description: "Buy an ape",
         };
-        this.dao
-          .connect(wallet)
-          .propose(proposal.targets, proposal.values, proposal.signatures, proposal.calldatas, proposal.description);
+        this.dao.propose(
+          proposal.targets,
+          proposal.values,
+          proposal.signatures,
+          proposal.calldatas,
+          proposal.description,
+        );
         proposalId = await this.dao.latestProposalIds(this.owner.address);
+        types = {
+          Ballot: [
+            { name: "proposalId", type: "uint256" },
+            { name: "support", type: "uint8" },
+          ],
+        };
+        domain = {
+          /** contract name
+           * In this case retrieved from a contract method that returns a string.
+           * Using a method to insure against a typo.
+           **/
+          name: await this.dao.name(),
+          chainId: (await provider.getNetwork()).chainId, // get chain id from ethers
+          verifyingContract: this.dao.address, // contract address
+        };
       });
 
       it("Should cast a 'FOR' vote", async function () {
-        const typedData = {
-          types: {
-            Ballot: [
-              { name: "proposalId", type: "uint256" },
-              { name: "support", type: "uint8" },
-            ],
-          },
-          domain: {
-            /** contract name
-             * In this case retrieved from a contract method that returns a string.
-             * Using a method to insure against a typo.
-             **/
-            name: await this.dao.name(),
-            chainId: (await provider.getNetwork()).chainId, // get chain id from ethers
-            verifyingContract: this.dao.address, // contract address
-          },
-          message: {
-            proposalId: parseInt(proposalId, 10),
-            support: 1,
-          },
+        const message = {
+          proposalId: parseInt(proposalId, 10),
+          support: 1,
         };
 
-        const sig = await wallet._signTypedData(typedData.domain, typedData.types, typedData.message);
+        const sig = await this.account1._signTypedData(domain, types, message);
         const { v, r, s } = ethers.utils.splitSignature(sig);
 
         await this.dao.castVotesBulk([proposalId], [1], [v], [r], [s]);
+        const voteRecord = await this.dao.getVoteRecord(proposalId, this.account1.address);
+        expect(voteRecord[0]).to.equal(true); // bool hasVoted; true
+        expect(voteRecord[1]).to.equal(1); // uint8 support; FOR
+      });
+      it("Should cast an 'AGAINST' vote", async function () {
+        const message = {
+          proposalId: parseInt(proposalId, 10),
+          support: 0,
+        };
+
+        const sig = await this.account1._signTypedData(domain, types, message);
+        const { v, r, s } = ethers.utils.splitSignature(sig);
+
+        await this.dao.castVotesBulk([proposalId], [0], [v], [r], [s]);
+        const voteRecord = await this.dao.getVoteRecord(proposalId, this.account1.address);
+        expect(voteRecord[0]).to.equal(true); // bool hasVoted; true
+        expect(voteRecord[1]).to.equal(0); // uint8 support; AGAINST
+      });
+
+      // Should not allow a user to cast a vote more than once
+      it("Should NOT allow a vote to be cast more than once", async function () {
+        const message1 = {
+          proposalId: parseInt(proposalId, 10),
+          support: 1,
+        };
+
+        const sig1 = await this.account1._signTypedData(domain, types, message1);
+        const { v: v1, r: r1, s: s1 } = ethers.utils.splitSignature(sig1);
+
+        await this.dao.castVotesBulk([proposalId], [1], [v1], [r1], [s1]);
+
+        // Second 'FOR' vote. Should reject.
+        const message2 = {
+          proposalId: parseInt(proposalId, 10),
+          support: 1,
+        };
+
+        const sig2 = await this.account1._signTypedData(domain, types, message2);
+        const { v: v2, r: r2, s: s2 } = ethers.utils.splitSignature(sig2);
+
+        await expect(this.dao.castVotesBulk([proposalId], [1], [v2], [r2], [s2])).to.be.revertedWith(
+          "_castVote: signer has already cast a vote.",
+        );
+      });
+
+      // Should fail if the vote is changed
+      it("Should fail IF the vote is changed", async function () {
+        const message = {
+          proposalId: parseInt(proposalId, 10),
+          support: 1,
+        };
+
+        const sig = await this.account1._signTypedData(domain, types, message);
+        const { v, r, s } = ethers.utils.splitSignature(sig);
+
+        // Vote changed from 'FOR' to 'AGAINST'
+        await expect(this.dao.castVotesBulk([proposalId], [0], [v], [r], [s])).to.be.revertedWith(
+          "_castVote: signer is not a member",
+        );
+
+        // Checking that the given user's vote hasn't been counted.
+        const voteRecord = await this.dao.getVoteRecord(proposalId, this.account1.address);
+        expect(voteRecord[0]).to.equal(false); // bool hasVoted; false
+      });
+
+      // Should fail if the proposalId is changed
+      // set up second proposal
+      // user votes for proposalA
+      // altered message is used with the same sig for proposalB
+      describe("castVotesBulk", function () {
+        // Should cast multiple votes in one transaction
+      });
+
+      describe("execute", function () {
+        // Should buy an nft using a queued proposal
       });
     });
   });
