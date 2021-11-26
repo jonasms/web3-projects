@@ -4,23 +4,17 @@ import type { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signe
 
 import type { CollectorDAO } from "../src/types/CollectorDAO";
 import { expect } from "chai";
-import { BigNumber } from "ethers";
-import { signTypedData, SignTypedDataVersion, recoverTypedSignature, TypedDataUtils } from "@metamask/eth-sig-util";
-import { signTypedData_v4 } from "eth-sig-util";
-import { string } from "hardhat/internal/core/params/argumentTypes";
-
-//@ts-ignore
-// import EIP712 from "../utils/eip712";
-// import { randomBytes } from "crypto";
-// import EIP712 from "eip-712";
+import { signTypedData, SignTypedDataVersion, recoverTypedSignature } from "@metamask/eth-sig-util";
 
 const { utils } = ethers;
 const { parseEther, randomBytes, keccak256 } = utils;
 const { provider } = waffle;
+let wallet: any;
 
 describe("CollectorDAO", function () {
   before(async function () {
     const accounts: SignerWithAddress[] = await ethers.getSigners();
+    [wallet] = await provider.getWallets();
     [this.owner, this.account1, this.account2, this.account3] = accounts;
     this.accounts = accounts;
     this.accountAddresses = accounts.map(a => a.address);
@@ -98,13 +92,11 @@ describe("CollectorDAO", function () {
         ],
       };
 
-      let wallet = new ethers.Wallet(randomBytes(32));
-
       let proposalId: string;
       let chainId: number;
 
       beforeEach(async function () {
-        await this.dao.buyMembership({ value: parseEther("1") });
+        await this.dao.connect(wallet).buyMembership({ value: parseEther("1") });
         const proposal = {
           targets: [this.account2.address], // TODO replace w/ test nftMarketplace contract address,
           values: [parseEther("1")],
@@ -112,13 +104,9 @@ describe("CollectorDAO", function () {
           calldatas: [randomBytes(64)],
           description: "Buy an ape",
         };
-        this.dao.propose(
-          proposal.targets,
-          proposal.values,
-          proposal.signatures,
-          proposal.calldatas,
-          proposal.description,
-        );
+        this.dao
+          .connect(wallet)
+          .propose(proposal.targets, proposal.values, proposal.signatures, proposal.calldatas, proposal.description);
         proposalId = await this.dao.latestProposalIds(this.owner.address);
         chainId = (await provider.getNetwork()).chainId;
       });
@@ -128,7 +116,6 @@ describe("CollectorDAO", function () {
           types: {
             EIP712Domain: [
               { name: "name", type: "string" },
-              //   { name: "version", type: "string" },
               { name: "chainId", type: "uint256" },
               { name: "verifyingContract", type: "address" },
             ],
@@ -139,9 +126,13 @@ describe("CollectorDAO", function () {
           },
           primaryType: "Ballot" as "Ballot",
           domain: {
+            /** contract name
+             * in this case retrieved from a contract method that returns a string
+             * using a method to insure against a typo
+             **/
             name: await this.dao.name(),
-            chainId: chainId,
-            verifyingContract: this.dao.address,
+            chainId: chainId, // get chain id from ethers
+            verifyingContract: this.dao.address, // contract address
           },
           message: {
             proposalId: parseInt(proposalId, 10),
@@ -149,63 +140,27 @@ describe("CollectorDAO", function () {
           },
         };
 
-        // const sig = await this.owner._signTypedData(typedData.domain, typedData.types, typedData.message);
-        console.log("WALLET PRIVATE KEY: ", wallet.privateKey);
-        console.log("WALLET ADDRESS: ", wallet.address);
-        const pKeyBuffer = Buffer.from(wallet.privateKey.slice(2), "hex");
-        const uintArr = new Uint8Array(pKeyBuffer);
-
-        console.log("UINT ARR: ", uintArr);
-
         const sig = signTypedData({
           data: typedData,
+          /** .slice(2) removes '0x'
+           * signTypedData() expectes just the private key
+           **/
           privateKey: Buffer.from(wallet.privateKey.slice(2), "hex"),
           version: SignTypedDataVersion.V4,
         });
 
-        console.log("SIG: ", sig);
-
+        // Equiv to recovery alg in _castVote()
         const extracedAddress = recoverTypedSignature({
           data: typedData,
           signature: sig,
           version: SignTypedDataVersion.V4,
         });
+
+        // The two values below should be equal
+        console.log("WALLET ADDRESS: ", wallet.address);
         console.log("EXTRACTED ADDRESS: ", extracedAddress);
-        // console.log("WALLET; SIGNED ADDRESSED: ", this.owner.address);
 
         const { v, r, s } = ethers.utils.splitSignature(sig);
-
-        // const message = [
-        //   {
-        //     type: "uint256",
-        //     name: "proposalid",
-        //     value: parseInt(proposalId, 10),
-        //   },
-        //   {
-        //     type: "uint8",
-        //     name: "support",
-        //     value: 1,
-        //   },
-        // ];
-
-        // console.log("PROP ID: ", proposalId, " | ", parseInt(proposalId, 10));
-
-        // const message = utils.toUtf8Bytes("1");
-        // const hash = ethers.utils.keccak256(message);
-        // const _sig = await this.owner.signMessage(ethers.utils.arrayify(hash));
-        // const recoveredKey = ethers.utils.verifyMessage(ethers.utils.arrayify(hash), _sig);
-        // const { v, r, s } = ethers.utils.splitSignature(_sig);
-
-        // console.log("SIG: ", _sig);
-
-        // // const recoveredKey = ethers.utils.recoverPublicKey(
-        // //   ethers.utils.hashMessage(Buffer.from(JSON.stringify(message))),
-        // //   _sig,
-        // // );
-        // console.log("OWNER ADDRESS: ", this.owner.address);
-        // console.log("RECOVERED KEY: ", recoveredKey);
-
-        // console.log("V: ", v, "R: ", r, "S: ", s);
 
         await this.dao.castVotesBulk([proposalId], [1], [v], [r], [s]);
       });

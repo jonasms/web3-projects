@@ -133,22 +133,18 @@ contract CollectorDAO is CollectorBase {
         );
         bytes32 structHash = keccak256(abi.encode(BALLOT_TYPEHASH, proposalId_, support_));
         bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
-
-        // bytes32 hash = keccak256(abi.encode(support_));
-        // bytes32 digest = keccak256(abi.encodePacked("\x19\x01", hash));
-        // bytes32 digest = keccak256(abi.encodePacked(bytes1(0x19), bytes1(0), keccak256(abi.encode(support_))));
         address signer = ecrecover(digest, v_, r_, s_);
 
         console.log("SIGNER ADDRESS: ", signer);
 
         // TODO do all invalid signatures resolve to address(0)?
-        require(signer != address(0), "castVote: invalid signature");
-        require(members[signer], "castVote: signer is not a member");
+        require(signer != address(0), "_castVote: invalid signature");
+        require(members[signer], "_castVote: signer is not a member");
 
         /* Cast Vote */
         Proposal storage proposal = proposals[proposalId_];
         Receipt storage receipt = proposal.receipts[signer];
-        require(!receipt.hasVoted, "castVote: signer has already cast a vote.");
+        require(!receipt.hasVoted, "_castVote: signer has already cast a vote.");
 
         if (support_ == uint8(Support.AGAINST)) {
             proposal.againstVotes++;
