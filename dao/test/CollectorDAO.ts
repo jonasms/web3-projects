@@ -108,30 +108,23 @@ describe("CollectorDAO", function () {
           .connect(wallet)
           .propose(proposal.targets, proposal.values, proposal.signatures, proposal.calldatas, proposal.description);
         proposalId = await this.dao.latestProposalIds(this.owner.address);
-        chainId = (await provider.getNetwork()).chainId;
       });
 
       it("Should cast a 'FOR' vote", async function () {
         const typedData = {
           types: {
-            EIP712Domain: [
-              { name: "name", type: "string" },
-              { name: "chainId", type: "uint256" },
-              { name: "verifyingContract", type: "address" },
-            ],
             Ballot: [
               { name: "proposalId", type: "uint256" },
               { name: "support", type: "uint8" },
             ],
           },
-          primaryType: "Ballot" as "Ballot",
           domain: {
             /** contract name
-             * in this case retrieved from a contract method that returns a string
-             * using a method to insure against a typo
+             * In this case retrieved from a contract method that returns a string.
+             * Using a method to insure against a typo.
              **/
             name: await this.dao.name(),
-            chainId: chainId, // get chain id from ethers
+            chainId: (await provider.getNetwork()).chainId, // get chain id from ethers
             verifyingContract: this.dao.address, // contract address
           },
           message: {
@@ -140,26 +133,7 @@ describe("CollectorDAO", function () {
           },
         };
 
-        const sig = signTypedData({
-          data: typedData,
-          /** .slice(2) removes '0x'
-           * signTypedData() expectes just the private key
-           **/
-          privateKey: Buffer.from(wallet.privateKey.slice(2), "hex"),
-          version: SignTypedDataVersion.V4,
-        });
-
-        // Equiv to recovery alg in _castVote()
-        const extracedAddress = recoverTypedSignature({
-          data: typedData,
-          signature: sig,
-          version: SignTypedDataVersion.V4,
-        });
-
-        // The two values below should be equal
-        console.log("WALLET ADDRESS: ", wallet.address);
-        console.log("EXTRACTED ADDRESS: ", extracedAddress);
-
+        const sig = await wallet._signTypedData(typedData.domain, typedData.types, typedData.message);
         const { v, r, s } = ethers.utils.splitSignature(sig);
 
         await this.dao.castVotesBulk([proposalId], [1], [v], [r], [s]);
