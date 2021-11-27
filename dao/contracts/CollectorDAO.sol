@@ -82,14 +82,18 @@ contract CollectorDAO is CollectorBase {
 
         // TODO this does not create a deterministic hash
         // uint256 proposalId = _hashProposal(targets_, values_, signatures_, calldatas_, keccak256(bytes(description_)));
-        uint256 proposalId = numProposals;
+        /**
+             '+1' in order to avoid proposalId ever being '0'.
+            latestProposalIds(address member_) will resolve to '0' if the given address
+            is not found in the map.
+        */
+        uint256 proposalId = numProposals + 1;
         numProposals++;
 
         Proposal storage proposal = proposals[proposalId]; // creates proposal
         // TODO this check not functioning
         require(proposal.startBlock == 0, "This proposal already exists.");
         latestProposalIds[msg.sender] = proposalId;
-        console.log("PROPOSAL ID: ", proposalId);
 
         uint256 endBlock = block.number + _votingPeriod();
 
@@ -124,8 +128,7 @@ contract CollectorDAO is CollectorBase {
         bytes32 r_,
         bytes32 s_
     ) internal {
-        // TODO require proposal is active
-        // require(state(proposalId_) == ProposalState.ACTIVE, "_castVote: proposal is not active.");
+        require(state(proposalId_) == ProposalState.ACTIVE, "_castVote: proposal is not active.");
 
         /* Get Signer */
         bytes32 domainSeparator = keccak256(
@@ -134,8 +137,6 @@ contract CollectorDAO is CollectorBase {
         bytes32 structHash = keccak256(abi.encode(BALLOT_TYPEHASH, proposalId_, support_));
         bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
         address signer = ecrecover(digest, v_, r_, s_);
-
-        console.log("SIGNER ADDRESS: ", signer);
 
         // TODO do all invalid signatures resolve to address(0)?
         require(signer != address(0), "_castVote: invalid signature");

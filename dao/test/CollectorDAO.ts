@@ -1,4 +1,4 @@
-import { artifacts, ethers, waffle } from "hardhat";
+import { artifacts, ethers, waffle, network } from "hardhat";
 import type { Artifact } from "hardhat/types";
 import type { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
 
@@ -9,6 +9,16 @@ const { utils } = ethers;
 const { parseEther, randomBytes, keccak256 } = utils;
 const { provider } = waffle;
 let wallet: any;
+
+async function mineBlocks(blockNumber: number) {
+  while (blockNumber > 0) {
+    blockNumber--;
+    await network.provider.request({
+      method: "evm_mine",
+      params: [],
+    });
+  }
+}
 
 describe("CollectorDAO", function () {
   before(async function () {
@@ -102,16 +112,19 @@ describe("CollectorDAO", function () {
           targets: [this.account3.address], // TODO replace w/ test nftMarketplace contract address,
           values: [parseEther("1")],
           signatures: ["buyNFT(uint id, uint value)"],
-          calldatas: [randomBytes(64)],
+          calldatas: [randomBytes(64)], // TODO change this to something that would work
           description: "Buy an ape",
         };
-        this.dao.propose(
+        await this.dao.propose(
           proposal.targets,
           proposal.values,
           proposal.signatures,
           proposal.calldatas,
           proposal.description,
         );
+
+        mineBlocks(1);
+
         proposalId = await this.dao.latestProposalIds(this.owner.address);
         types = {
           Ballot: [
@@ -206,15 +219,55 @@ describe("CollectorDAO", function () {
       });
 
       // Should fail if the proposalId is changed
-      // set up second proposal
-      // user votes for proposalA
-      // altered message is used with the same sig for proposalB
+      it("Should fail if the proposalId is changed", async function () {
+        const proposalB = {
+          targets: [this.account3.address], // TODO replace w/ test nftMarketplace contract address,
+          values: [parseEther("2")],
+          signatures: ["buyNFT(uint id, uint value)"],
+          calldatas: [randomBytes(64)], // TODO change this to something that would work
+          description: "Buy a punk",
+        };
+
+        await this.dao
+          .connect(this.account1)
+          .propose(
+            proposalB.targets,
+            proposalB.values,
+            proposalB.signatures,
+            proposalB.calldatas,
+            proposalB.description,
+          );
+
+        // Message and Sig intercepted by an attacker
+        const message = {
+          proposalId: parseInt(proposalId, 10),
+          support: 1,
+        };
+
+        const sig = await this.account1._signTypedData(domain, types, message);
+        const { v, r, s } = ethers.utils.splitSignature(sig);
+
+        const proposalIdB = await this.dao.latestProposalIds(this.account1.address);
+
+        // Attacker tries to use sig to vote 'FOR' a different proposal.
+        // The sig resolves to the incorrect address.
+        await expect(this.dao.connect(this.account1).castVotesBulk([proposalIdB], [1], [v], [r], [s])).to.revertedWith(
+          "_castVote: signer is not a member",
+        );
+      });
       describe("castVotesBulk", function () {
         // Should cast multiple votes in one transaction
       });
 
       describe("execute", function () {
+        beforeEach(async function () {
+          // create proposal
+          // create 20 memberships
+        });
+
         // Should buy an nft using a queued proposal
+        // cast votes; 10 for, 5 against
+        // jump blocks
       });
     });
   });
