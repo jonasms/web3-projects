@@ -181,6 +181,10 @@ contract CollectorDAO is CollectorBase {
         }
     }
 
+    function queue(uint256 proposalId_) external {
+        // queue a proposal that has succeeded
+    }
+
     // TODO test how payable works here
     function execute(uint256 proposalId_) external payable {
         require(state(proposalId_) == ProposalState.QUEUED, "execute: proposal must be queued");

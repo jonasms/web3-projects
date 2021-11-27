@@ -274,19 +274,14 @@ describe("CollectorDAO", function () {
       const nftWallet = ethers.Wallet.createRandom().connect(provider);
       await marketplaceContract.addNftContract(nftWallet.address, [parseEther("1"), parseEther("2")]);
 
-      // const nftId = new ArrayBuffer(0);
-      // const nftPrice = new ArrayBuffer(parseEther("1").toNumber());
-
-      const nftId = 0;
-      const nftPrice = parseEther("1");
-
       const proposal = {
-        targets: [proposalContract.address], // TODO replace w/ test nftMarketplace contract address,
+        targets: [proposalContract.address],
         values: [parseEther("1")],
         signatures: ["buyNFT(uint id, uint value)"],
-        calldatas: [[nftId, nftPrice]], // TODO change this to something that would work
+        calldatas: [new Uint8Array(Buffer.from(`0, ${parseEther("1")}`))],
         description: "Buy a punk",
       };
+
       // create 20 memberships
       const { dao } = this;
       const membershipPromises = this.accounts.slice(0, 19).map((account: SignerWithAddress) => {
