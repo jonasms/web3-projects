@@ -17,11 +17,11 @@ contract NftMarketplace {
 
     mapping(address => NftContract) nfts;
 
-    function addNftContract(address nftContract_, uint256[2][] calldata nfts_) external {
+    function addNftContract(address nftContract_, uint256[] calldata nfts_) external {
         NftContract storage nftContract = nfts[nftContract_];
 
         for (uint256 i = 0; i < nfts_.length; i++) {
-            nftContract.nfts[nfts_[i][0]] = Nft(msg.sender, nfts_[i][1]);
+            nftContract.nfts[i] = Nft(msg.sender, nfts_[i]);
         }
     }
 
