@@ -8,11 +8,13 @@ import "hardhat/console.sol";
 
 contract CollectorDAO is CollectorBase {
     /// @notice The EIP-712 typehash for the contract's domain
-    bytes32 public constant DOMAIN_TYPEHASH =
+    bytes32 private constant DOMAIN_TYPEHASH =
         keccak256("EIP712Domain(string name,uint256 chainId,address verifyingContract)");
 
     /// @notice The EIP-712 typehash for the ballot struct used by the contract
-    bytes32 public constant BALLOT_TYPEHASH = keccak256("Ballot(uint256 proposalId,uint8 support)");
+    bytes32 private constant BALLOT_TYPEHASH = keccak256("Ballot(uint256 proposalId,uint8 support)");
+
+    uint256 private constant DELAY = 60 * 60 * 24 * 2; // 2 days in seconds
 
     string public constant name = "Collector DAO Governor";
 
@@ -173,9 +175,22 @@ contract CollectorDAO is CollectorBase {
         }
     }
 
-    function queue(uint256 proposalId_) external {
-        // queue a proposal that has succeeded
+    /**
+        @notice: Queues successful proposals.
+        @notice: Doing this to avoid executing proposals immediately upon success.
+     */
+    function queue(uint256 proposalId_, uint256 eta_) external {
+        require(state(proposalId_) == ProposalState.SUCCEEDED, "queue: can only queue successful proposals");
+        Proposal storage proposal = proposals[proposalId_];
+        require(eta >= block.timestamp + delay, "queue: eta must go beyond the set 'delay'");
+
+        proposal.eta = eta_;
     }
+
+    /**
+        @notice: Cancels any unexecuted proposal, executable only by the Guardian.
+     */
+    function cancel(uint256 proposalId_) external {}
 
     function _executeTransaction() internal returns (bool success) {}
 
@@ -184,6 +199,9 @@ contract CollectorDAO is CollectorBase {
         // require(state(proposalId_) == ProposalState.QUEUED, "execute: proposal must be queued");
 
         Proposal storage proposal = proposals[proposalId_];
+
+        // require(block.timestamp >= proposal.eta, "execute: Proposal can't be executed before its 'eta'");
+
         proposal.executed = true;
 
         for (uint256 i = 0; i < proposal.targets.length; i++) {
