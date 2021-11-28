@@ -92,22 +92,11 @@ describe("CollectorDAO", function () {
   });
 
   describe("_castVote()", function () {
-    const Domain = async (gov: CollectorDAO) => ({
-      name: await gov.name(),
-      chainId: 1,
-      verifyingContract: gov.address,
-    });
-
-    const Types = {
-      Ballot: [
-        { name: "proposalId", type: "uint256" },
-        { name: "support", type: "uint8" },
-      ],
-    };
-
     let proposalId: string;
     let types: any;
     let domain: any;
+
+    const randBytes = randomBytes(64);
 
     beforeEach(async function () {
       await this.dao.buyMembership({ value: parseEther("1") });
@@ -116,7 +105,7 @@ describe("CollectorDAO", function () {
         targets: [this.account3.address], // TODO replace w/ test nftMarketplace contract address,
         values: [parseEther("1")],
         signatures: ["buyNFT(uint id, uint value)"],
-        calldatas: [randomBytes(64)], // TODO change this to something that would work
+        calldatas: [randBytes], // TODO change this to something that would work
         description: "Buy an ape",
       };
       await this.dao.propose(
@@ -150,7 +139,8 @@ describe("CollectorDAO", function () {
 
     it("Should cast a 'FOR' vote", async function () {
       const message = {
-        proposalId: parseInt(proposalId, 10),
+        // proposalId: parseInt(proposalId, 10),
+        proposalId: BigNumber.from(proposalId),
         support: 1,
       };
 
@@ -162,9 +152,10 @@ describe("CollectorDAO", function () {
       expect(voteRecord[0]).to.equal(true); // bool hasVoted; true
       expect(voteRecord[1]).to.equal(1); // uint8 support; FOR
     });
+
     it("Should cast an 'AGAINST' vote", async function () {
       const message = {
-        proposalId: parseInt(proposalId, 10),
+        proposalId: BigNumber.from(proposalId),
         support: 0,
       };
 
@@ -180,7 +171,7 @@ describe("CollectorDAO", function () {
     // Should not allow a user to cast a vote more than once
     it("Should NOT allow a vote to be cast more than once", async function () {
       const message1 = {
-        proposalId: parseInt(proposalId, 10),
+        proposalId: BigNumber.from(proposalId),
         support: 1,
       };
 
@@ -191,7 +182,7 @@ describe("CollectorDAO", function () {
 
       // Second 'FOR' vote. Should reject.
       const message2 = {
-        proposalId: parseInt(proposalId, 10),
+        proposalId: BigNumber.from(proposalId),
         support: 1,
       };
 
@@ -206,7 +197,7 @@ describe("CollectorDAO", function () {
     // Should fail if the vote is changed
     it("Should fail IF the vote is changed", async function () {
       const message = {
-        proposalId: parseInt(proposalId, 10),
+        proposalId: BigNumber.from(proposalId),
         support: 1,
       };
 
@@ -239,7 +230,7 @@ describe("CollectorDAO", function () {
 
       // Message and Sig intercepted by an attacker
       const message = {
-        proposalId: parseInt(proposalId, 10),
+        proposalId: BigNumber.from(proposalId),
         support: 1,
       };
 
@@ -255,6 +246,7 @@ describe("CollectorDAO", function () {
       );
     });
   });
+
   describe("castVotesBulk()", function () {
     // Should cast multiple votes in one transaction
   });

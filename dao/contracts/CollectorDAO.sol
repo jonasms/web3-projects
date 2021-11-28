@@ -80,18 +80,10 @@ contract CollectorDAO is CollectorBase {
         require(targets_.length == signatures_.length, "propose: information arity mismatch; signatures");
         require(targets_.length == calldatas_.length, "propose: information arity mismatch; calldatas");
 
-        // TODO this does not create a deterministic hash
-        // uint256 proposalId = _hashProposal(targets_, values_, signatures_, calldatas_, keccak256(bytes(description_)));
-        /**
-             '+1' in order to avoid proposalId ever being '0'.
-            latestProposalIds(address member_) will resolve to '0' if the given address
-            is not found in the map.
-        */
-        uint256 proposalId = numProposals + 1;
-        numProposals++;
+        uint256 proposalId = _hashProposal(targets_, values_, signatures_, calldatas_, keccak256(bytes(description_)));
 
         Proposal storage proposal = proposals[proposalId]; // creates proposal
-        // TODO this check not functioning
+
         require(proposal.startBlock == 0, "This proposal already exists.");
         latestProposalIds[msg.sender] = proposalId;
 
@@ -185,15 +177,20 @@ contract CollectorDAO is CollectorBase {
         // queue a proposal that has succeeded
     }
 
+    function _executeTransaction() internal returns (bool success) {}
+
     // TODO test how payable works here
     function execute(uint256 proposalId_) external payable {
-        require(state(proposalId_) == ProposalState.QUEUED, "execute: proposal must be queued");
+        // require(state(proposalId_) == ProposalState.QUEUED, "execute: proposal must be queued");
 
         Proposal storage proposal = proposals[proposalId_];
         proposal.executed = true;
 
         for (uint256 i = 0; i < proposal.targets.length; i++) {
-            (bool success, ) = proposal.targets[i].call{ value: proposal.values[i] }(proposal.calldatas[i]);
+            (bool success, ) = proposal.targets[i].call{ value: proposal.values[i] }(
+                abi.encodePacked(bytes4(keccak256(bytes(proposal.signatures[i]))), proposal.calldatas[i])
+            );
+            //(proposal.calldatas[i]);
             require(success, "execute: call failed");
         }
     }
