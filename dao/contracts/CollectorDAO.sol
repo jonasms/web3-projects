@@ -14,7 +14,7 @@ contract CollectorDAO is CollectorBase {
     /// @notice The EIP-712 typehash for the ballot struct used by the contract
     bytes32 private constant BALLOT_TYPEHASH = keccak256("Ballot(uint256 proposalId,uint8 support)");
 
-    uint256 private constant DELAY = 60 * 60 * 24 * 2; // 2 days in seconds
+    uint256 private constant DELAY = 2 days;
 
     string public constant name = "Collector DAO Governor";
 
@@ -34,7 +34,7 @@ contract CollectorDAO is CollectorBase {
 
     function _quorum() internal view returns (uint24) {
         // Avoiding loss of precision
-        return (memberCount * 100) / 25;
+        return (memberCount * 100) / 400;
     }
 
     function state(uint256 proposalId_) public view returns (ProposalState) {
@@ -45,15 +45,15 @@ contract CollectorDAO is CollectorBase {
             return ProposalState.CANCELED;
         } else if (proposal.executed) {
             return ProposalState.EXECUTED;
-        } else if (block.number < proposal.startBlock) {
+        } else if (block.timestamp < proposal.startTime) {
             return ProposalState.PENDING;
-        } else if (block.number <= proposal.endBlock) {
+        } else if (block.timestamp <= proposal.endTime) {
             return ProposalState.ACTIVE;
         } else if (proposal.forVotes <= _quorum() || proposal.forVotes <= proposal.againstVotes) {
             return ProposalState.DEFEATED;
         } else if (proposal.eta == 0) {
             return ProposalState.SUCCEEDED;
-        } else if (block.timestamp > proposal.eta) {
+        } else if (block.timestamp > proposal.eta + _gracePeriod()) {
             return ProposalState.EXPIRED;
         } else {
             return ProposalState.QUEUED;
@@ -86,10 +86,10 @@ contract CollectorDAO is CollectorBase {
 
         Proposal storage proposal = proposals[proposalId]; // creates proposal
 
-        require(proposal.startBlock == 0, "This proposal already exists.");
+        require(proposal.startTime == 0, "This proposal already exists.");
         latestProposalIds[msg.sender] = proposalId;
 
-        uint256 endBlock = block.number + _votingPeriod();
+        uint256 endTime = block.timestamp + _votingPeriod();
 
         proposal.id = proposalId;
         proposal.proposer = msg.sender;
@@ -97,8 +97,8 @@ contract CollectorDAO is CollectorBase {
         proposal.values = values_;
         proposal.signatures = signatures_;
         proposal.calldatas = calldatas_;
-        proposal.startBlock = block.number;
-        proposal.endBlock = endBlock;
+        proposal.startTime = block.timestamp;
+        proposal.endTime = endTime;
 
         emit ProposalCreated(
             proposalId,
@@ -107,8 +107,8 @@ contract CollectorDAO is CollectorBase {
             values_,
             signatures_,
             calldatas_,
-            block.number,
-            endBlock,
+            block.timestamp,
+            endTime,
             description_
         );
 
@@ -203,13 +203,12 @@ contract CollectorDAO is CollectorBase {
         return target_.call{ value: value_ }(callData);
     }
 
-    // TODO test how payable works here
-    function execute(uint256 proposalId_) external payable {
-        // require(state(proposalId_) == ProposalState.QUEUED, "execute: proposal must be queued");
+    function execute(uint256 proposalId_) external {
+        require(state(proposalId_) == ProposalState.QUEUED, "execute: proposal must be queued");
 
         Proposal storage proposal = proposals[proposalId_];
 
-        // require(block.timestamp >= proposal.eta, "execute: Proposal can't be executed before its 'eta'");
+        require(block.timestamp >= proposal.eta, "execute: Proposal can't be executed before its 'eta'");
 
         proposal.executed = true;
 
@@ -225,7 +224,6 @@ contract CollectorDAO is CollectorBase {
     }
 
     function getVoteRecord(uint256 proposalId_, address voter_) external view returns (Receipt memory receipt) {
-        // TODO: return proposals[proposalId_].receipts[voter_] ??
         Proposal storage proposal = proposals[proposalId_];
         return proposal.receipts[voter_];
     }

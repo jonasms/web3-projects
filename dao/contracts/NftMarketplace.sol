@@ -32,7 +32,6 @@ contract NftMarketplace {
 
     function getPrice(uint256 nftContractId_, uint256 nftId_) external view returns (uint256 price) {
         NftContract storage nftContract = nfts[nftContractId_];
-        console.log("PRICE: ", nftContract.nfts[nftId_].price);
         return nftContract.nfts[nftId_].price;
     }
 

@@ -1,6 +1,7 @@
 import { artifacts, ethers, waffle, network } from "hardhat";
 import type { Artifact } from "hardhat/types";
 import type { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
+import sinon from "sinon";
 
 import type { CollectorDAO } from "../src/types/CollectorDAO";
 import type { Proposal } from "../src/types/Proposal";
@@ -8,6 +9,7 @@ import type { NftMarketplace } from "../src/types/NftMarketplace";
 
 import { expect } from "chai";
 import { BigNumber } from "ethers";
+import { domainToASCII } from "url";
 
 const { utils } = ethers;
 const { parseEther, randomBytes, keccak256 } = utils;
@@ -25,6 +27,9 @@ async function mineBlocks(blockNumber: number) {
   }
 }
 
+let clock: any;
+const ONE_DAY = 60 * 1000 * 60 * 24;
+
 describe("CollectorDAO", function () {
   before(async function () {
     const accounts: SignerWithAddress[] = await ethers.getSigners();
@@ -38,6 +43,15 @@ describe("CollectorDAO", function () {
     const daoArtifact: Artifact = await artifacts.readArtifact("CollectorDAO");
     this.dao = <CollectorDAO>await waffle.deployContract(this.owner, daoArtifact);
     this.address = this.dao.address;
+
+    clock = sinon.useFakeTimers({
+      now: new Date().getTime(),
+      toFake: ["Date"],
+    });
+  });
+
+  afterEach(function () {
+    sinon.restore();
   });
 
   describe("buyMembership()", function () {
@@ -117,7 +131,8 @@ describe("CollectorDAO", function () {
         proposal.description,
       );
 
-      mineBlocks(1);
+      // mineBlocks(1);
+      clock.tick(ONE_DAY);
 
       proposalId = await this.dao.latestProposalIds(this.owner.address);
 
@@ -256,6 +271,8 @@ describe("CollectorDAO", function () {
     let proposalId: any;
     let proposalContract: any;
     let marketplaceContract: any;
+    let types: any;
+    let domain: any;
 
     beforeEach(async function () {
       const marketplaceArtifact: Artifact = await artifacts.readArtifact("NftMarketplace");
@@ -298,17 +315,64 @@ describe("CollectorDAO", function () {
 
         proposalId = await dao.latestProposalIds(this.owner.address);
 
-        mineBlocks(1);
+        types = {
+          Ballot: [
+            { name: "proposalId", type: "uint256" },
+            { name: "support", type: "uint8" },
+          ],
+        };
+        domain = {
+          /** contract name
+           * In this case retrieved from a contract method that returns a string.
+           * Using a method to insure against a typo.
+           **/
+          name: await this.dao.name(),
+          chainId: (await provider.getNetwork()).chainId, // get chain id from ethers
+          verifyingContract: this.dao.address, // contract address
+        };
+
+        // mineBlocks(1);
+        clock.tick(ONE_DAY);
       });
     });
 
-    // Should buy an nft using a queued proposal
     it("Should buy an nft using a queued proposal", async function () {
-      // await proposalContract.buyNft(0, 0);
+      const { dao } = this;
       // cast votes; 10 for, 5 against
-      await this.dao.execute(proposalId, { value: parseEther("1") });
-      // jump blocks
-      expect(await marketplaceContract.getOwner(0, 0)).to.equal(this.dao.address);
+      const signaturePromises = this.accounts.slice(0, 15).map(async (account: SignerWithAddress, idx: number) => {
+        const message = {
+          proposalId,
+          support: idx < 10 ? 1 : 0,
+        };
+
+        const sig = await account._signTypedData(domain, types, message);
+        const { v, r, s } = ethers.utils.splitSignature(sig);
+        return { proposalId: message.proposalId, support: message.support, v, r, s };
+      });
+
+      return Promise.all(signaturePromises).then(async (signatures: any) => {
+        // console.log("SIGS: ", signatures);
+        await dao.castVotesBulk(
+          signatures.map((s: any) => s.proposalId),
+          signatures.map((s: any) => s.support),
+          signatures.map((s: any) => s.v),
+          signatures.map((s: any) => s.r),
+          signatures.map((s: any) => s.s),
+        );
+
+        // mineBlocks(17280); // see CollectorBase.sol:_votingPeriod()
+        clock.tick(ONE_DAY * 3);
+
+        // set eta to `now` + 3 days in seconds
+        const threeDays = (ONE_DAY * 3) / 1000;
+        await dao.queue(proposalId, Math.round(new Date().getTime() / 1000) + threeDays);
+
+        clock.tick(ONE_DAY * 3);
+
+        await dao.execute(proposalId);
+        // jump blocks
+        expect(await marketplaceContract.getOwner(0, 0)).to.equal(dao.address);
+      });
     });
   });
 });

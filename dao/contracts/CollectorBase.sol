@@ -15,8 +15,8 @@ contract CollectorBase {
         uint256[] values;
         string[] signatures;
         bytes[] calldatas;
-        uint256 startBlock;
-        uint256 endBlock;
+        uint256 startTime;
+        uint256 endTime;
         uint256 forVotes;
         uint256 againstVotes;
         uint256 abstainVotes;
@@ -49,8 +49,8 @@ contract CollectorBase {
         uint256[] values,
         string[] signatures,
         bytes[] calldatas,
-        uint256 startBlock,
-        uint256 endBlock,
+        uint256 startTime,
+        uint256 endTime,
         string description
     );
 
@@ -65,7 +65,10 @@ contract CollectorBase {
     }
 
     function _votingPeriod() internal pure returns (uint256) {
-        // ~3 days in blocks (assuming 15s blocks)
-        return 17280;
+        return 3 days;
+    }
+
+    function _gracePeriod() internal pure returns (uint256) {
+        return 14 days;
     }
 }

@@ -24,9 +24,6 @@ contract Proposal {
     }
 
     function buyNft(uint256 nftContractId_, uint256 nftId_) external payable {
-        console.log("NFT CONTRACT ID: ", nftContractId_);
-        console.log("NFT ID: ", nftId_);
-
         uint256 price = NftMarketplaceInt(marketplaceAddr).getPrice(nftContractId_, nftId_);
 
         if (price >= msg.value) {
