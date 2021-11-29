@@ -11,7 +11,7 @@ contract CollectorBase {
         uint256 id;
         address proposer;
         uint256 eta;
-        address[] targets;
+        address payable[] targets;
         uint256[] values;
         string[] signatures;
         bytes[] calldatas;
@@ -45,7 +45,7 @@ contract CollectorBase {
     event ProposalCreated(
         uint256 id,
         address proposer,
-        address[] targets,
+        address payable[] targets,
         uint256[] values,
         string[] signatures,
         bytes[] calldatas,

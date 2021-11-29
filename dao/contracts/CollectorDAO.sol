@@ -61,7 +61,7 @@ contract CollectorDAO is CollectorBase {
     }
 
     function _hashProposal(
-        address[] memory targets,
+        address payable[] memory targets,
         uint256[] memory values,
         string[] memory signatures,
         bytes[] memory calldatas,
@@ -71,7 +71,7 @@ contract CollectorDAO is CollectorBase {
     }
 
     function propose(
-        address[] memory targets_,
+        address payable[] memory targets_,
         uint256[] memory values_,
         string[] memory signatures_,
         bytes[] memory calldatas_,
@@ -176,23 +176,32 @@ contract CollectorDAO is CollectorBase {
     }
 
     /**
-        @notice: Queues successful proposals.
-        @notice: Doing this to avoid executing proposals immediately upon success.
+        Queues successful proposals.
+        Doing this to avoid executing proposals immediately upon success.
      */
     function queue(uint256 proposalId_, uint256 eta_) external {
         require(state(proposalId_) == ProposalState.SUCCEEDED, "queue: can only queue successful proposals");
         Proposal storage proposal = proposals[proposalId_];
-        require(eta >= block.timestamp + delay, "queue: eta must go beyond the set 'delay'");
+        require(eta_ >= block.timestamp + DELAY, "queue: eta must go beyond the set 'delay'");
 
         proposal.eta = eta_;
     }
 
     /**
-        @notice: Cancels any unexecuted proposal, executable only by the Guardian.
+        Cancels any unexecuted proposal, executable only by the Guardian.
      */
     function cancel(uint256 proposalId_) external {}
 
-    function _executeTransaction() internal returns (bool success) {}
+    function _execute(
+        address payable target_,
+        uint256 value_,
+        string memory signature_,
+        bytes memory data_
+    ) internal returns (bool success, bytes memory data) {
+        bytes memory callData = abi.encodePacked(bytes4(keccak256(bytes(signature_))), data_);
+
+        return target_.call{ value: value_ }(callData);
+    }
 
     // TODO test how payable works here
     function execute(uint256 proposalId_) external payable {
@@ -205,11 +214,13 @@ contract CollectorDAO is CollectorBase {
         proposal.executed = true;
 
         for (uint256 i = 0; i < proposal.targets.length; i++) {
-            (bool success, ) = proposal.targets[i].call{ value: proposal.values[i] }(
-                abi.encodePacked(bytes4(keccak256(bytes(proposal.signatures[i]))), proposal.calldatas[i])
+            (bool success, ) = _execute(
+                proposal.targets[i],
+                proposal.values[i],
+                proposal.signatures[i],
+                proposal.calldatas[i]
             );
-            //(proposal.calldatas[i]);
-            require(success, "execute: call failed");
+            require(success, "execute: proposal execution failed");
         }
     }
 

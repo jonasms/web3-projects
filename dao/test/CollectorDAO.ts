@@ -13,6 +13,7 @@ const { utils } = ethers;
 const { parseEther, randomBytes, keccak256 } = utils;
 const { provider } = waffle;
 let wallet: any;
+const abiCoder = new utils.AbiCoder();
 
 async function mineBlocks(blockNumber: number) {
   while (blockNumber > 0) {
@@ -253,24 +254,29 @@ describe("CollectorDAO", function () {
 
   describe("execute()", function () {
     let proposalId: any;
+    let proposalContract: any;
+    let marketplaceContract: any;
 
     beforeEach(async function () {
       const marketplaceArtifact: Artifact = await artifacts.readArtifact("NftMarketplace");
-      const marketplaceContract = <NftMarketplace>await waffle.deployContract(this.owner, marketplaceArtifact);
+      marketplaceContract = <NftMarketplace>await waffle.deployContract(this.owner, marketplaceArtifact);
 
       const proposalArtifact: Artifact = await artifacts.readArtifact("Proposal");
-      const proposalContract = <Proposal>(
+      proposalContract = <Proposal>(
         await waffle.deployContract(this.owner, proposalArtifact, [marketplaceContract.address])
       );
 
-      const nftWallet = ethers.Wallet.createRandom().connect(provider);
-      await marketplaceContract.addNftContract(nftWallet.address, [parseEther("1"), parseEther("2")]);
+      // const nftWallet = ethers.Wallet.createRandom().connect(provider);
+      await marketplaceContract.connect(this.account3).addNftContract([
+        [0, parseEther("1")],
+        [1, parseEther("2")],
+      ]);
 
       const proposal = {
         targets: [proposalContract.address],
         values: [parseEther("1")],
-        signatures: ["buyNFT(uint id, uint value)"],
-        calldatas: [new Uint8Array(Buffer.from(`0, ${parseEther("1")}`))],
+        signatures: ["buyNft(uint256,uint256)"],
+        calldatas: [abiCoder.encode(["uint256", "uint256"], [0, 0])],
         description: "Buy a punk",
       };
 
@@ -291,14 +297,18 @@ describe("CollectorDAO", function () {
         );
 
         proposalId = await dao.latestProposalIds(this.owner.address);
+
+        mineBlocks(1);
       });
     });
 
     // Should buy an nft using a queued proposal
     it("Should buy an nft using a queued proposal", async function () {
+      // await proposalContract.buyNft(0, 0);
       // cast votes; 10 for, 5 against
       await this.dao.execute(proposalId, { value: parseEther("1") });
       // jump blocks
+      expect(await marketplaceContract.getOwner(0, 0)).to.equal(this.dao.address);
     });
   });
 });

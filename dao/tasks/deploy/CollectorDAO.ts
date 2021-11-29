@@ -21,9 +21,9 @@ task("deploy:SupportContracts").setAction(async function (taskArguments: TaskArg
   await marketplace.deployed();
   console.log("NftMarketplace deployed to: ", marketplace.address);
 
-  await marketplace.addNftContract("0x90F79bf6EB2c4f870365E785982E1f101E93b906", [
-    ethers.utils.parseEther("1"),
-    ethers.utils.parseEther("2"),
+  await marketplace.addNftContract([
+    [0, ethers.utils.parseEther("1")],
+    [1, ethers.utils.parseEther("2")],
   ]);
 
   // deploy Proposal
