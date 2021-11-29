@@ -3,9 +3,6 @@ pragma solidity ^0.8.0;
 
 import "./CollectorBase.sol";
 
-// TODO remove
-import "hardhat/console.sol";
-
 contract CollectorDAO is CollectorBase {
     /// @notice The EIP-712 typehash for the contract's domain
     bytes32 private constant DOMAIN_TYPEHASH =
@@ -28,7 +25,6 @@ contract CollectorDAO is CollectorBase {
     uint24 numProposals;
 
     constructor() {
-        // TODO send guardian_ in as a param
         guardian = msg.sender;
     }
 
@@ -41,7 +37,6 @@ contract CollectorDAO is CollectorBase {
         Proposal storage proposal = proposals[proposalId_];
 
         if (proposal.canceled) {
-            // TODO need to create method for canceling if not extra feature
             return ProposalState.CANCELED;
         } else if (proposal.executed) {
             return ProposalState.EXECUTED;
@@ -132,7 +127,6 @@ contract CollectorDAO is CollectorBase {
         bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
         address signer = ecrecover(digest, v_, r_, s_);
 
-        // TODO do all invalid signatures resolve to address(0)?
         require(signer != address(0), "_castVote: invalid signature");
         require(members[signer], "_castVote: signer is not a member");
 
@@ -190,7 +184,15 @@ contract CollectorDAO is CollectorBase {
     /**
         Cancels any unexecuted proposal, executable only by the Guardian.
      */
-    function cancel(uint256 proposalId_) external {}
+    function cancel(uint256 proposalId_) external {
+        require(msg.sender == guardian);
+
+        Proposal storage proposal = proposals[proposalId_];
+
+        require(!proposal.executed, "cancel: Proposal is already executed");
+
+        proposal.canceled = true;
+    }
 
     function _execute(
         address payable target_,
