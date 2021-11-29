@@ -1,5 +1,14 @@
 # DAO Project by Jonas_M
 
+## Design Exercises
+
+1. **Per project specs, there is no vote delegation. This means for someone's vote to count, they must manually participate every time. How would you design your contract to allow for non-transitive vote delegation?**
+
+Non-transitive vote delegation could be achieved by using `msg.sender` as one of the values when decoding the signature for a vote. This would require the delegate's address to be included in the vote's signature at the time of delegation.
+
+2. **What are some problems with implementing transitive vote delegation on-chain?**
+   Tracking votes. If a delegate votes and then passes their votes on to another delegate, and this can occur n times, the smart contract at hand needs to track votes in order to make they aren't counted more than once. This can be solved for, perhaps, by disallowing executed votes from being delegated.
+
 ## Spec
 
 ## Spec Notes
