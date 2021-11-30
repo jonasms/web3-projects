@@ -9,6 +9,18 @@ Non-transitive vote delegation could be achieved by using `msg.sender` as one of
 2. **What are some problems with implementing transitive vote delegation on-chain?**
    Tracking votes. If a delegate votes and then passes their votes on to another delegate, and this can occur n times, the smart contract at hand needs to track votes in order to make they aren't counted more than once. This can be solved for, perhaps, by disallowing executed votes from being delegated.
 
+## Repo Set up
+
+1. Create a `.env` with the following values before compiling:
+
+```
+MNEMONIC=exotic accident planet click stem age cotton treat supreme chronic ice track update talk walk
+INFURA_API_KEY=0
+REACT_APP_DEV_WALLET_ADDRESS=0
+```
+
+2. Run `yarn compile` or `npm run compile`.
+
 ## Spec
 
 ## Spec Notes
