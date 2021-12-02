@@ -11,6 +11,8 @@ import { expect } from "chai";
 const { utils } = ethers;
 const { parseEther } = utils;
 
+const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
+
 describe("Unit tests", function () {
   let token: SotanoCoin;
   let factory: BananaswapV1Factory;
@@ -29,20 +31,18 @@ describe("Unit tests", function () {
       // deploy Sotano Coin
       const tokenArtifact: Artifact = await artifacts.readArtifact("SotanoCoin");
       token = <SotanoCoin>await waffle.deployContract(admin, tokenArtifact, [treasury.address]);
-
       console.log("TOKEN ADDRESS: ", token.address);
-      // conduct ico
+
+      // TODO conduct ico
 
       // deploy Factory
       const factoryArtifact: Artifact = await artifacts.readArtifact("BananaswapV1Factory");
       factory = <BananaswapV1Factory>await waffle.deployContract(admin, factoryArtifact);
-
       console.log("FACTORY ADDRESS: ", factory.address);
 
       // deploy Router
       const routerArtifact: Artifact = await artifacts.readArtifact("BananaswapV1Router");
       router = <BananaswapV1Router>await waffle.deployContract(admin, routerArtifact, [factory.address]);
-
       console.log("ROUTER ADDRESS: ", router.address);
 
       // deploy Pair by adding Liquidity
@@ -56,10 +56,8 @@ describe("Unit tests", function () {
 
     describe("Pairs", () => {
       it("Should have a pair for 'token'", async () => {
-        console.log("PAIR ADDRESS: ", pairAddress);
-        // expect(pairAddress).to.be.undefined;
-
-        expect(pairAddress).to.not.equal(undefined);
+        expect(utils.isAddress(pairAddress)).to.equal(true);
+        expect(pairAddress).to.not.equal(ZERO_ADDRESS);
       });
     });
   });
