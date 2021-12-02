@@ -5,19 +5,19 @@ contract BananaswapV1 {
     uint256 public totalSupply;
     mapping(address => uint256) public balanceOf;
 
-    function _mint(address to, uint256 value) internal {
-        balanceOf[to] += value;
-        totalSupply += value;
+    function _mint(address to_, uint256 value_) internal {
+        balanceOf[to_] += value_;
+        totalSupply += value_;
     }
 
-    function _burn(address from, uint256 value) internal {
-        require(from != address(0), "Bananswap._burn: CANNOT BURN FROM ADDRESS 0");
+    function _burn(address from_, uint256 value_) internal {
+        require(from_ != address(0), "Bananswap._burn: CANNOT BURN FROM ADDRESS 0");
 
-        uint256 amount = balanceOf[from];
-        require(amount >= value, "Bananswap._burn: INSUFFICIENT FUNDS");
+        uint256 amount = balanceOf[from_];
+        require(amount >= value_, "Bananswap._burn: INSUFFICIENT FUNDS");
 
-        balanceOf[from] -= value;
-        totalSupply -= value;
+        balanceOf[from_] -= value_;
+        totalSupply -= value_;
     }
     // transfer(), transferFrom()?
 }
