@@ -15,7 +15,6 @@ contract BananaswapV1Router {
         address token,
         uint256 tokenAmountTarget,
         uint256 ethAmountTarget,
-        uint256 amountATarget,
         uint256 tokenAmountMin,
         uint256 ethAmountMin
     ) internal returns (uint256 tokenAmount, uint256 ethAmount) {
@@ -25,6 +24,23 @@ contract BananaswapV1Router {
         }
         // if reserves are empty, set amounts to given target amounts
         // else, calculate amounts of each token to deposit
+    }
+
+    function depositLiquidity(
+        address token,
+        uint256 tokenAmountTarget,
+        // uint256 ethAmountTarget,
+        uint256 tokenAmountMin,
+        uint256 ethAmountMin
+    ) external payable {
+        (uint256 tokenAmount, uint256 ethAmount) = _getAmountsToDeposit(
+            token,
+            tokenAmountTarget,
+            // ethAmountTarget,
+            msg.value,
+            tokenAmountMin,
+            ethAmountMin
+        );
     }
     // depositLiquidity()
     // withdrawLiquidity()
