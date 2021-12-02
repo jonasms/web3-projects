@@ -11,10 +11,10 @@ contract BananaswapV1 {
     }
 
     function _burn(address from_, uint256 value_) internal {
-        require(from_ != address(0), "Bananswap._burn: CANNOT BURN FROM ADDRESS 0");
+        require(from_ != address(0), "Bananswap._burn: ZERO_ADDRESS");
 
         uint256 amount = balanceOf[from_];
-        require(amount >= value_, "Bananswap._burn: INSUFFICIENT FUNDS");
+        require(amount >= value_, "Bananswap._burn: INSUFFICIENT_FUNDS");
 
         balanceOf[from_] -= value_;
         totalSupply -= value_;
