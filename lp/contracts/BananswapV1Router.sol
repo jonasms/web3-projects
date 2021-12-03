@@ -2,6 +2,8 @@
 pragma solidity >=0.8.4;
 
 import "./interfaces/IBananaswapV1Factory.sol";
+import "./interfaces/IBananaswapV1Pair.sol";
+
 import "./libraries/BananaswapV1Library.sol";
 
 contract BananaswapV1Router {
@@ -47,25 +49,38 @@ contract BananaswapV1Router {
         }
     }
 
+    // TODO look into utility of to_ and deadlie_
     function depositLiquidity(
-        address token,
-        uint256 tokenAmountTarget,
+        address token_,
+        uint256 targetTokenAmount_,
         // uint256 ethAmountTarget,
-        uint256 tokenAmountMin,
-        uint256 ethAmountMin
+        uint256 minTokenAmount_,
+        uint256 minEthAmount_
     ) external payable {
         (uint256 tokenAmount, uint256 ethAmount) = _getAmountsToDeposit(
-            token,
-            tokenAmountTarget,
+            token_,
+            targetTokenAmount_,
             // ethAmountTarget,
             msg.value,
-            tokenAmountMin,
-            ethAmountMin
+            minTokenAmount_,
+            minEthAmount_
         );
 
-        // transfer tokenAmount to pool via token.transferFrom
-        // transfer ethAmount to pool
+        address pair = IBananaswapV1Factory(factory).getPair(token_);
+
+        // transfer tokenAmount to pair via token.transferFrom
+        BananaswapV1Library.transferFrom(token_, msg.sender, pair, tokenAmount);
+
+        // transfer ethAmount to pair
+        BananaswapV1Library.transferEth(pair, ethAmount);
+
         // refund dif btween msg.value and ethAmount
+        uint256 refundAmt = msg.value - ethAmount;
+        if (refundAmt > 0) {
+            BananaswapV1Library.transferEth(msg.sender, refundAmt);
+        }
+
+        // mint liquidity to msg.sender
     }
     // depositLiquidity()
     // withdrawLiquidity()

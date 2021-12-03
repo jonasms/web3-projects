@@ -34,5 +34,27 @@ library BananaswapV1Library {
         amountB = (amountA_ * reserveB_) / reserveA_;
     }
 
+    function transferFrom(
+        address token_,
+        address from_,
+        address to_,
+        uint256 value_
+    ) internal {
+        // bytes4(keccak256(bytes('transferFrom(address,address,uint256)')));
+        (bool success, bytes memory data) = token_.call(abi.encodeWithSelector(0x23b872dd, from_, to_, value_));
+        require(
+            success && (data.length == 0 || abi.decode(data, (bool))),
+            "BananaswapV1Library::transferFrom: TRANSACTION_FAILED"
+        );
+    }
+
+    function transferEth(address to_, uint256 value_) internal {
+        (bool success, bytes memory data) = to_.call{ value: value_ }("");
+        require(
+            success && (data.length == 0 || abi.decode(data, (bool))),
+            "BananaswapV1Library::transferEth: TRANSACTION_FAILED"
+        );
+    }
+
     // getAmountOut()
 }
