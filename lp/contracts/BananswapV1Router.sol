@@ -3,7 +3,6 @@ pragma solidity >=0.8.4;
 
 import "./interfaces/IBananaswapV1Factory.sol";
 import "./interfaces/IBananaswapV1Pair.sol";
-
 import "./libraries/BananaswapV1Library.sol";
 
 contract BananaswapV1Router {
@@ -56,7 +55,7 @@ contract BananaswapV1Router {
         // uint256 ethAmountTarget,
         uint256 minTokenAmount_,
         uint256 minEthAmount_
-    ) external payable {
+    ) external payable returns (uint256 liquidity) {
         (uint256 tokenAmount, uint256 ethAmount) = _getAmountsToDeposit(
             token_,
             targetTokenAmount_,
@@ -81,6 +80,7 @@ contract BananaswapV1Router {
         }
 
         // mint liquidity to msg.sender
+        liquidity = IBananaswapV1Pair(pair).mint(msg.sender);
     }
     // depositLiquidity()
     // withdrawLiquidity()
