@@ -5,6 +5,9 @@ import "./interfaces/IBananaswapV1Factory.sol";
 import "./interfaces/IBananaswapV1Pair.sol";
 import "./libraries/BananaswapV1Library.sol";
 
+// TODO remove
+import "hardhat/console.sol";
+
 contract BananaswapV1Router {
     address factory;
 
@@ -61,6 +64,9 @@ contract BananaswapV1Router {
             minTokenAmount_,
             minEthAmount_
         );
+
+        console.log("TOKEN AMOUNT: ", tokenAmount);
+        console.log("ETH AMOUNT: ", ethAmount);
 
         address pair = IBananaswapV1Factory(factory).getPair(token_);
 

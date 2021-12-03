@@ -185,7 +185,7 @@ contract SotanoCoin is ERC20, Ownable {
         address _to,
         address _from,
         uint256 _amount
-    ) internal override virutal {
+    ) internal virtual override {
         if (feesEnabled) {
             uint256 taxAmount = (_amount * 2) / 100;
             _amount = _amount - taxAmount;
