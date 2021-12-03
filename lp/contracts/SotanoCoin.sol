@@ -168,16 +168,30 @@ contract SotanoCoin is ERC20, Ownable {
         }
     }
 
-    function transfer(address _to, uint256 _amount) public virtual override returns (bool) {
-        (uint256 amountToTransfer, uint256 transactionFee) = getTransferAndFeeAmounts(_amount);
+    // TODO delete
+    // function transfer(address _to, uint256 _amount) public virtual override returns (bool) {
+    //     (uint256 amountToTransfer, uint256 transactionFee) = getTransferAndFeeAmounts(_amount);
 
-        _transfer(_msgSender(), _to, amountToTransfer);
+    //     _transfer(_msgSender(), _to, amountToTransfer);
 
-        if (transactionFee > 0) {
-            _transfer(_msgSender(), treasuryAddress, transactionFee);
+    //     if (transactionFee > 0) {
+    //         _transfer(_msgSender(), treasuryAddress, transactionFee);
+    //     }
+
+    //     return true;
+    // }
+
+    function _transfer(
+        address _to,
+        address _from,
+        uint256 _amount
+    ) internal override virutal {
+        if (feesEnabled) {
+            uint256 taxAmount = (_amount * 2) / 100;
+            _amount = _amount - taxAmount;
+            super._transfer(_to, treasuryAddress, taxAmount);
         }
-
-        return true;
+        super._transfer(_to, _from, _amount);
     }
 
     function getTransferAndFeeAmounts(uint256 _amount) internal view returns (uint256, uint256) {
