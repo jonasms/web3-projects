@@ -41,6 +41,10 @@ contract BananaswapV1Pair is BananaswapV1 {
         }
 
         _mint(to_, liquidity);
+
+        // _update()
+        _update(tokenBal, _ethBal);
+        // emit Mint event
     }
 
     // receives ETH payments
@@ -55,6 +59,12 @@ contract BananaswapV1Pair is BananaswapV1 {
     // burn
     // swap
     // _update
+    function _update(uint256 tokenBalance_, uint256 ethBalance_) private {
+        tokenReserve = tokenBalance_;
+        ethReserve = ethBalance_;
+
+        // emit Sync event
+    }
 
     receive() external payable {
         _receiveEth(msg.value);

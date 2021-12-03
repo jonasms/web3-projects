@@ -95,8 +95,10 @@ describe("Unit tests", function () {
       // grant LP tokens to depositor
       it("Initial liquidity deposit should set reserves and grant LP tokens", async () => {
         const [tokenReserve, ethReserve] = await pair.getReserves();
-        console.log("TOKEN RESERVE: ", tokenReserve);
-        console.log("ETH RESERVE: ", ethReserve);
+        expect(tokenReserve).to.equal(parseEther("3"));
+        expect(ethReserve).to.equal(parseEther("1"));
+        // console.log("TOKEN RESERVE: ", tokenReserve);
+        // console.log("ETH RESERVE: ", ethReserve);
       });
     });
   });
