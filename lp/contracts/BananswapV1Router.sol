@@ -12,7 +12,6 @@ contract BananaswapV1Router {
         factory = factory_;
     }
 
-    // _getAmountsToDeposit()
     function _getAmountsToDeposit(
         address token_,
         uint256 targetTokenAmount_,
@@ -48,18 +47,16 @@ contract BananaswapV1Router {
         }
     }
 
-    // TODO look into utility of to_ and deadlie_
+    // TODO look into utility of to_ and deadline_
     function depositLiquidity(
         address token_,
         uint256 targetTokenAmount_,
-        // uint256 ethAmountTarget,
         uint256 minTokenAmount_,
         uint256 minEthAmount_
     ) external payable returns (uint256 liquidity) {
         (uint256 tokenAmount, uint256 ethAmount) = _getAmountsToDeposit(
             token_,
             targetTokenAmount_,
-            // ethAmountTarget,
             msg.value,
             minTokenAmount_,
             minEthAmount_
@@ -67,10 +64,7 @@ contract BananaswapV1Router {
 
         address pair = IBananaswapV1Factory(factory).getPair(token_);
 
-        // transfer tokenAmount to pair via token.transferFrom
         BananaswapV1Library.transferFrom(token_, msg.sender, pair, tokenAmount);
-
-        // transfer ethAmount to pair
         BananaswapV1Library.transferEth(pair, ethAmount);
 
         // refund dif btween msg.value and ethAmount
@@ -79,7 +73,6 @@ contract BananaswapV1Router {
             BananaswapV1Library.transferEth(msg.sender, refundAmt);
         }
 
-        // mint liquidity to msg.sender
         liquidity = IBananaswapV1Pair(pair).mint(msg.sender);
     }
     // depositLiquidity()

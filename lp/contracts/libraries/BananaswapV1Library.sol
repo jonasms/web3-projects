@@ -22,18 +22,18 @@ library BananaswapV1Library {
         (tokenReserves, ethReserves) = IBananaswapV1Pair(pair).getReserves();
     }
 
+    // copied from https://github.com/Uniswap/v2-periphery/blob/master/contracts/libraries/UniswapV2Library.sol
     function quote(
         uint256 amountA_,
         uint256 reserveA_,
         uint256 reserveB_
     ) internal pure returns (uint256 amountB) {
-        // require amountA_ > 0, insufficient funds
-        // require reserveA_ and reserveB_ above 0, unsufficient liquidity
         require(amountA_ > 0, "BananaswapV1Library::quote(): INSUFFICIENT_AMOUNT");
         require(reserveA_ > 0 && reserveB_ > 0, "BananaswapV1Library::quote(): INSUFFICIENT_LIQUIDITY");
         amountB = (amountA_ * reserveB_) / reserveA_;
     }
 
+    // copied from https://github.com/Uniswap/solidity-lib/blob/master/contracts/libraries/TransferHelper.sol
     function transferFrom(
         address token_,
         address from_,

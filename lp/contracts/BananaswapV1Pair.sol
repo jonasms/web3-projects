@@ -9,33 +9,27 @@ contract BananaswapV1Pair is BananaswapV1 {
     uint256 public constant MIN_LIQUIDITY = 10**3;
 
     address token;
-
-    // address token1;
     uint256 tokenReserve;
     uint256 ethReserve;
     uint256 ethBalance; // TODO just use native balance?
 
     constructor(address token_) {
         token = token_;
-        // token0 = token0_;
-        // token1 = token1_;
     }
 
     function getReserves() public view returns (uint256, uint256) {
         return (tokenReserve, ethReserve);
     }
 
-    // mint()
     function mint(address to_) external returns (uint256 liquidity) {
-        // get balances
+        // get qty of deposits
         uint256 tokenBal = IERC20(token).balanceOf(address(this));
         uint256 _ethBal = ethBalance;
 
-        // get amounts by getting dif btwn balances and reserves
         uint256 tokenAmt = tokenBal - tokenReserve;
         uint256 ethAmt = _ethBal - ethReserve;
 
-        // calculate liquidity to grant
+        // calculate liquidity to grant to LP
         uint256 _totalSupply = totalSupply;
 
         // handle initial liquidity deposit
