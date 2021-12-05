@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.8.4;
 
-import "./BananaswapV1.sol";
+import "./BananaswapV1ERC20.sol";
 import "./libraries/Math.sol";
 import "@openzeppelin/contracts/interfaces/IERC20.sol";
 
-contract BananaswapV1Pair is BananaswapV1 {
+contract BananaswapV1Pair is BananaswapV1ERC20 {
     uint256 public constant MIN_LIQUIDITY = 10**3;
 
     address token;
@@ -42,9 +42,22 @@ contract BananaswapV1Pair is BananaswapV1 {
 
         _mint(to_, liquidity);
 
-        // _update()
         _update(tokenBal, _ethBal);
-        // emit Mint event
+        // TODO emit Mint event
+    }
+
+    function burn(address from_) external returns (uint256 tokenAmt, uint256 ethAmt) {
+        // get liquidity burned
+        uint256 liqudityToBurn = balanceOf[address(this)];
+        uint256 tokenBal = IERC20(token).balanceOf(address(this));
+        // get balances?
+
+        // get tokenAmt and ethAmt
+        tokenAmt = tokenBal * (liqudityToBurn / totalSupply);
+        ethAmt = address(this).balance * (liqudityToBurn / totalSupply);
+
+        // burn liquidity
+        _burn(from_, liqudityToBurn);
     }
 
     // receives ETH payments

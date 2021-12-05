@@ -65,23 +65,38 @@ contract BananaswapV1Router {
             minEthAmount_
         );
 
-        console.log("TOKEN AMOUNT: ", tokenAmount);
-        console.log("ETH AMOUNT: ", ethAmount);
-
         address pair = IBananaswapV1Factory(factory).getPair(token_);
 
+        // requires `msg.sender` to grant allowance to `pair` before calling `depositLiquidity()`
         BananaswapV1Library.transferFrom(token_, msg.sender, pair, tokenAmount);
         BananaswapV1Library.transferEth(pair, ethAmount);
 
         // refund dif btween msg.value and ethAmount
-        uint256 refundAmt = msg.value - ethAmount;
-        if (refundAmt > 0) {
-            BananaswapV1Library.transferEth(msg.sender, refundAmt);
+        if (msg.value - ethAmount > 0) {
+            BananaswapV1Library.transferEth(msg.sender, msg.value - ethAmount);
         }
 
         liquidity = IBananaswapV1Pair(pair).mint(msg.sender);
     }
-    // depositLiquidity()
+
     // withdrawLiquidity()
+    function withdrawLiquidity(address token_, uint256 liquidityToWithdraw_)
+        external
+        returns (uint256 tokensToWithdraw, uint256 ethToWidthraw)
+    {
+        // get pair
+        address pair = IBananaswapV1Factory(factory).getPair(token_);
+
+        // transfer liquidity to pair
+        //  requires user to permit transfer
+        //  TODO call pair.transferFrom directly? Less gas.
+        // BananaswapV1Library.transferFrom(pair, pair, msg.sender, liquidityToWithdraw_);
+        IBananaswapV1Pair(pair).transferFrom(pair, msg.sender, liquidityToWithdraw_);
+
+        // pair.burn(to) // returns amts to return
+        (tokensToWithdraw, ethToWidthraw) = IBananaswapV1Pair(pair).burn(msg.sender);
+
+        // TODO require amts burned >= minAmts
+    }
     // safeTransfer() ?
 }
