@@ -3,6 +3,9 @@ pragma solidity >=0.8.4;
 
 import "./interfaces/IBananaswapV1ERC20.sol";
 
+// TODO remove
+import "hardhat/console.sol";
+
 contract BananaswapV1ERC20 is IBananaswapV1ERC20 {
     uint256 public totalSupply;
     mapping(address => uint256) public balanceOf;
@@ -36,6 +39,8 @@ contract BananaswapV1ERC20 is IBananaswapV1ERC20 {
         // reduce allowance by value
         allowance[from_][to_] -= value_;
 
+        console.log("CUR BAL: ", balanceOf[from_]);
+        console.log("VALUE: ", value_);
         // transfer
         // TODO use _transfer()?
         balanceOf[from_] -= value_;
@@ -44,6 +49,10 @@ contract BananaswapV1ERC20 is IBananaswapV1ERC20 {
     }
 
     // approve
+    function approve(address to_, uint256 amount_) external returns (bool) {
+        allowance[msg.sender][to_] = amount_;
+        return true;
+    }
 
     // permit
 }

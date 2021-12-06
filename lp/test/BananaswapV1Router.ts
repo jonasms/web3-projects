@@ -9,12 +9,13 @@ import type { SotanoCoin } from "../src/types/SotanoCoin";
 
 import { expect } from "chai";
 
-const { utils } = ethers;
+const { utils, BigNumber } = ethers;
 const { parseEther } = utils;
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
 const conductIco = async (_token: SotanoCoin, investors: SignerWithAddress[]) => {
+  const value = 5;
   // advance to open phase
   await _token.advancePhase();
   await _token.advancePhase();
@@ -22,8 +23,45 @@ const conductIco = async (_token: SotanoCoin, investors: SignerWithAddress[]) =>
 
   // investors buy tokens
   for (let i = 0; i < investors.length; i++) {
-    await _token.connect(investors[i]).purchase({ value: parseEther("5") });
+    await _token.connect(investors[i]).purchase({ value: parseEther(value.toString()) });
   }
+
+  return value * investors.length;
+};
+
+const conductLiquidityDeposits = async (
+  investors: SignerWithAddress[],
+  tokenAmt: number,
+  ethAmt: number,
+  router: BananaswapV1Router,
+  token: SotanoCoin,
+) => {
+  const _tokenAmt = tokenAmt.toString();
+  const _ethAmt = ethAmt.toString();
+  const liquidityGrants = [];
+
+  let investor;
+
+  for (let i = 0; i < investors.length; i++) {
+    investor = investors[i];
+    // permit token transfer
+    await token.connect(investor).approve(router.address, parseEther(_tokenAmt));
+    liquidityGrants.push(
+      await router
+        .connect(investor)
+        .depositLiquidity(
+          token.address,
+          parseEther(_tokenAmt),
+          parseEther((tokenAmt / 2).toString()),
+          parseEther((ethAmt / 2).toString()),
+          {
+            value: parseEther(_ethAmt),
+          },
+        ),
+    );
+  }
+
+  return liquidityGrants.map(tx => tx.value.toString());
 };
 
 describe("Unit tests", function () {
@@ -50,7 +88,7 @@ describe("Unit tests", function () {
       console.log("TOKEN ADDRESS: ", token.address);
 
       // TODO conduct ico
-      conductIco(token, accounts.slice(0, 11));
+      await conductIco(token, accounts);
 
       // deploy Factory
       const factoryArtifact: Artifact = await artifacts.readArtifact("BananaswapV1Factory");
@@ -63,15 +101,15 @@ describe("Unit tests", function () {
       console.log("ROUTER ADDRESS: ", router.address);
 
       // grant allowance via SotanoCoin
-      await token.connect(account1).approve(router.address, parseEther("3"));
-      const allowance = await token.connect(account1).allowance(admin.address, router.address);
+      await token.connect(account1).approve(router.address, parseEther("4"));
+      const allowance = await token.connect(account1).allowance(account1.address, router.address);
 
       console.log("ALLOWANCE: ", allowance.toString());
 
       // deploy Pair by adding Liquidity
       await router
         .connect(account1)
-        .depositLiquidity(token.address, parseEther("3"), parseEther("3"), parseEther("1"), {
+        .depositLiquidity(token.address, parseEther("4"), parseEther("4"), parseEther("1"), {
           value: parseEther("1"),
         });
 
@@ -92,8 +130,51 @@ describe("Unit tests", function () {
     describe("Deposit Liquidity", () => {
       it("Initial liquidity deposit should set reserves and grant LP tokens", async () => {
         const [tokenReserve, ethReserve] = await pair.getReserves();
-        expect(tokenReserve).to.equal(parseEther("3"));
+        expect(tokenReserve).to.equal(parseEther("4"));
         expect(ethReserve).to.equal(parseEther("1"));
+
+        // TODO test LP tokens granted
+      });
+      // TODO test multiple deposits
+    });
+    describe("Withdraw Liquidity", () => {
+      beforeEach(async () => {
+        // Total Liquidity:
+        //  Tokens: 84 (4 + 80)
+        //  ETH: 21 (1 + 20)
+        await conductLiquidityDeposits(accounts.slice(1, 11), 8, 2, router, token);
+      });
+
+      // No swaps
+      it("Liquidity withdrawl should result in expected tokens", async () => {
+        const totalSupply = await pair.totalSupply();
+        expect(await pair.getReserves()).to.deep.equal([parseEther("84"), parseEther("21")]);
+        // TODO place test below somehwere
+        // expect(await pair.balanceOf(account1.address)).to.deep.equal(parseEther("2").sub(1000));
+        expect(await pair.balanceOf(account2.address)).to.equal(parseEther("4"));
+
+        // SOT balance should be 25 - 8
+        expect(await token.balanceOf(account2.address)).to.equal(parseEther("17"));
+
+        await pair.connect(account2).approve(pairAddress, parseEther("1"));
+        await router.connect(account2).withdrawLiquidity(token.address, parseEther("1"));
+
+        expect(await pair.balanceOf(account2.address)).to.equal(parseEther("3"));
+        expect(await pair.totalSupply()).to.equal(totalSupply.sub(parseEther("1")));
+        expect(await pair.getReserves()).to.deep.equal([parseEther("82"), parseEther("20.5")]);
+
+        // SOT balance should be 25 - 8 + (8/4) = 19
+        expect(await token.balanceOf(account2.address)).to.equal(parseEther("19"));
+
+        await pair.connect(account2).approve(pairAddress, parseEther("3"));
+        await router.connect(account2).withdrawLiquidity(token.address, parseEther("3"));
+
+        expect(await pair.balanceOf(account2.address)).to.deep.equal(parseEther("0"));
+        expect(await pair.totalSupply()).to.equal(totalSupply.sub(parseEther("4")));
+        expect(await pair.getReserves()).to.deep.equal([parseEther("76"), parseEther("19")]);
+
+        // SOT balance restored to original 25
+        expect(await token.balanceOf(account2.address)).to.equal(parseEther("25"));
       });
     });
   });

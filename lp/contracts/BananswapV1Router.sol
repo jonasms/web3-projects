@@ -88,10 +88,10 @@ contract BananaswapV1Router {
         address pair = IBananaswapV1Factory(factory).getPair(token_);
 
         // transfer liquidity to pair
-        //  requires user to permit transfer
+        //  requires pair to permit transfer of SOT to user
         //  TODO call pair.transferFrom directly? Less gas.
         // BananaswapV1Library.transferFrom(pair, pair, msg.sender, liquidityToWithdraw_);
-        IBananaswapV1Pair(pair).transferFrom(pair, msg.sender, liquidityToWithdraw_);
+        IBananaswapV1Pair(pair).transferFrom(msg.sender, pair, liquidityToWithdraw_);
 
         // pair.burn(to) // returns amts to return
         (tokensToWithdraw, ethToWidthraw) = IBananaswapV1Pair(pair).burn(msg.sender);

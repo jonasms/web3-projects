@@ -38,7 +38,7 @@ function getChainConfig(network: keyof typeof chainIds): NetworkUserConfig {
   const url: string = "https://" + network + ".infura.io/v3/" + infuraApiKey;
   return {
     accounts: {
-      count: 10,
+      count: 20,
       mnemonic,
       path: "m/44'/60'/0'/0",
     },

@@ -3,7 +3,11 @@ pragma solidity >=0.8.4;
 
 import "./BananaswapV1ERC20.sol";
 import "./libraries/Math.sol";
+import "./libraries/BananaswapV1Library.sol";
 import "@openzeppelin/contracts/interfaces/IERC20.sol";
+
+// TODO remove
+import "hardhat/console.sol";
 
 contract BananaswapV1Pair is BananaswapV1ERC20 {
     uint256 public constant MIN_LIQUIDITY = 10**3;
@@ -25,19 +29,26 @@ contract BananaswapV1Pair is BananaswapV1ERC20 {
         // get qty of deposits
         uint256 tokenBal = IERC20(token).balanceOf(address(this));
         uint256 _ethBal = ethBalance;
-
-        uint256 tokenAmt = tokenBal - tokenReserve;
-        uint256 ethAmt = _ethBal - ethReserve;
-
-        // calculate liquidity to grant to LP
+        uint256 _tokenReserve = tokenReserve;
+        uint256 _ethReserve = ethReserve;
         uint256 _totalSupply = totalSupply;
 
+        uint256 tokenAmt = tokenBal - _tokenReserve;
+        uint256 ethAmt = _ethBal - _ethReserve;
+
+        // console.log("TOTAL SUPPLY: ", _totalSupply);
+        // console.log("TOKEN RESERVE: ", _tokenReserve);
+        // console.log("TOKENS CONTRIBUTED: ", tokenAmt);
+        // console.log("ETH RESERVE: ", _ethReserve);
+        // console.log("ETH CONTRIBUTED: ", ethAmt);
+
+        // calculate liquidity to grant to LP
         // handle initial liquidity deposit
         if (_totalSupply == 0) {
             liquidity = Math.sqrt(tokenAmt * ethAmt) - MIN_LIQUIDITY;
             _mint(address(0), MIN_LIQUIDITY);
         } else {
-            liquidity = Math.min((tokenAmt / tokenReserve) * _totalSupply, (ethAmt / ethReserve) * _totalSupply);
+            liquidity = Math.min((tokenAmt * _totalSupply) / _tokenReserve, (ethAmt * _totalSupply) / _ethReserve);
         }
 
         _mint(to_, liquidity);
@@ -46,18 +57,28 @@ contract BananaswapV1Pair is BananaswapV1ERC20 {
         // TODO emit Mint event
     }
 
-    function burn(address from_) external returns (uint256 tokenAmt, uint256 ethAmt) {
+    // TODO lock
+    function burn(address to_) external returns (uint256 tokenAmt, uint256 ethAmt) {
         // get liquidity burned
-        uint256 liqudityToBurn = balanceOf[address(this)];
+        uint256 liquidityToBurn = balanceOf[address(this)];
         uint256 tokenBal = IERC20(token).balanceOf(address(this));
-        // get balances?
+        uint256 ethBal = address(this).balance;
+        uint256 _totalSupply = totalSupply;
 
-        // get tokenAmt and ethAmt
-        tokenAmt = tokenBal * (liqudityToBurn / totalSupply);
-        ethAmt = address(this).balance * (liqudityToBurn / totalSupply);
+        // get token and eth amounts to distribute to LP
+        tokenAmt = (tokenBal * liquidityToBurn) / _totalSupply;
+        ethAmt = (ethBal * liquidityToBurn) / _totalSupply;
+
+        BananaswapV1Library.transfer(token, to_, tokenAmt);
+        _transferEth(to_, ethAmt);
+
+        tokenBal = IERC20(token).balanceOf(address(this));
+        ethBal = address(this).balance;
+
+        _update(tokenBal, ethBal);
 
         // burn liquidity
-        _burn(from_, liqudityToBurn);
+        _burn(address(this), liquidityToBurn);
     }
 
     // receives ETH payments
@@ -77,6 +98,14 @@ contract BananaswapV1Pair is BananaswapV1ERC20 {
         ethReserve = ethBalance_;
 
         // emit Sync event
+    }
+
+    function _transferEth(address to_, uint256 amount_) internal {
+        (bool success, bytes memory data) = to_.call{ value: amount_ }("");
+        require(
+            success && (data.length == 0 || abi.decode(data, (bool))),
+            "BananaswapV1Pair::_transferEth: transfer failed"
+        );
     }
 
     receive() external payable {

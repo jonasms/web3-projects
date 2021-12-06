@@ -34,6 +34,20 @@ library BananaswapV1Library {
     }
 
     // copied from https://github.com/Uniswap/solidity-lib/blob/master/contracts/libraries/TransferHelper.sol
+    function transfer(
+        address token_,
+        address to_,
+        uint256 value_
+    ) internal {
+        // bytes4(keccak256(bytes('transfer(address,uint256)')));
+        (bool success, bytes memory data) = token_.call(abi.encodeWithSelector(0xa9059cbb, to_, value_));
+        require(
+            success && (data.length == 0 || abi.decode(data, (bool))),
+            "TransferHelper::safeTransfer: transfer failed"
+        );
+    }
+
+    // copied from https://github.com/Uniswap/solidity-lib/blob/master/contracts/libraries/TransferHelper.sol
     function transferFrom(
         address token_,
         address from_,
