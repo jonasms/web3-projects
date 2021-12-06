@@ -135,7 +135,8 @@ describe("Unit tests", function () {
 
         // TODO test LP tokens granted
       });
-      // TODO test multiple deposits
+      // TODO test multiple deposits (tested below?)
+      // TODO test bad token/eth ratio
     });
     describe("Withdraw Liquidity", () => {
       beforeEach(async () => {
@@ -163,7 +164,7 @@ describe("Unit tests", function () {
         expect(await pair.totalSupply()).to.equal(totalSupply.sub(parseEther("1")));
         expect(await pair.getReserves()).to.deep.equal([parseEther("82"), parseEther("20.5")]);
 
-        // SOT balance should be 25 - 8 + (8/4) = 19
+        // SOT balance should be 25 - 8 + (8 / 4) = 19
         expect(await token.balanceOf(account2.address)).to.equal(parseEther("19"));
 
         await pair.connect(account2).approve(pairAddress, parseEther("3"));

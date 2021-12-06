@@ -33,6 +33,15 @@ library BananaswapV1Library {
         amountB = (amountA_ * reserveB_) / reserveA_;
     }
 
+    function quoteWithFees(
+        uint256 amountIn_,
+        uint256 reserveIn_,
+        uint256 reserveOut_
+    ) internal pure returns (uint256 amountOut) {
+        uint256 amountInLessFee = amountIn_ * 997;
+        amountOut = (reserveIn_ * reserveOut_) / ((reserveIn_ * 1000) + amountInLessFee);
+    }
+
     // copied from https://github.com/Uniswap/solidity-lib/blob/master/contracts/libraries/TransferHelper.sol
     function transfer(
         address token_,

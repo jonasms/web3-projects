@@ -77,8 +77,42 @@ contract BananaswapV1Pair is BananaswapV1ERC20 {
 
         _update(tokenBal, ethBal);
 
-        // burn liquidity
         _burn(address(this), liquidityToBurn);
+    }
+
+    // TODO lock
+    function swap(
+        uint256 tokensOut_,
+        uint256 ethOut_,
+        address to_
+    ) external {
+        require(tokensOut_ > 0 || ethOut_ > 0, "Bananaswap::swap: INSUFFICIENT_AMOUNT_IN");
+        require(tokenReserve >= tokensOut_ && ethReserve >= ethOut_, "Bananaswap::swap: INSUFFICIENT_LIQUIDITY");
+
+        if (tokensOut_ > 0) {
+            BananaswapV1Library.transfer(token, to_, tokensOut_);
+        }
+
+        if (ethOut_ > 0) {
+            BananaswapV1Library.transferEth(to_, ethOut_);
+        }
+
+        uint256 tokenBal = IERC20(token).balanceOf(address(this));
+        uint256 ethBal = address(this).balanace;
+
+        uint256 tokensIn = tokenBal > tokenReserve - tokensOut_ ? tokenBal - tokenReserve - tokensOut_ : 0;
+        uint256 ethIn = ethBal > ethReserve - ethOut_ ? ethBal - ethReserve - ethOut_ : 0;
+
+        require(tokensIn > 0 || ethIn > 0, "Bananaswap::swap: INSUFFICIENT_AMOUNT_IN");
+
+        // compare balances less fees to K
+        uint256 tokenBalLessFee = (tokenBal * 1000) - (tokensIn * 3);
+        uint256 ethBalLessFee = (ethBal * 1000) - (ethIn * 3);
+        require(tokenBalLessFee * ethBalLessFee >= tokenReserve * ethReserve * 1000**2, "Bananaswap::swap: INVALID_K");
+
+        _update(tokenBal, ethBal);
+
+        // TODO emit Swap event
     }
 
     // receives ETH payments
@@ -90,16 +124,14 @@ contract BananaswapV1Pair is BananaswapV1ERC20 {
         _receiveEth(msg.value);
     }
 
-    // burn
-    // swap
-    // _update
     function _update(uint256 tokenBalance_, uint256 ethBalance_) private {
         tokenReserve = tokenBalance_;
         ethReserve = ethBalance_;
 
-        // emit Sync event
+        // TODO emit Sync event
     }
 
+    // TODO use library fxn
     function _transferEth(address to_, uint256 amount_) internal {
         (bool success, bytes memory data) = to_.call{ value: amount_ }("");
         require(

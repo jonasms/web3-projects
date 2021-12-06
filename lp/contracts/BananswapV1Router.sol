@@ -51,6 +51,7 @@ contract BananaswapV1Router {
     }
 
     // TODO look into utility of to_ and deadline_
+    // TODO handle token fees
     function depositLiquidity(
         address token_,
         uint256 targetTokenAmount_,
@@ -79,24 +80,36 @@ contract BananaswapV1Router {
         liquidity = IBananaswapV1Pair(pair).mint(msg.sender);
     }
 
-    // withdrawLiquidity()
+    // TODO handle token fees
     function withdrawLiquidity(address token_, uint256 liquidityToWithdraw_)
         external
         returns (uint256 tokensToWithdraw, uint256 ethToWidthraw)
     {
-        // get pair
         address pair = IBananaswapV1Factory(factory).getPair(token_);
 
-        // transfer liquidity to pair
-        //  requires pair to permit transfer of SOT to user
-        //  TODO call pair.transferFrom directly? Less gas.
-        // BananaswapV1Library.transferFrom(pair, pair, msg.sender, liquidityToWithdraw_);
+        // transfer liquidity to pair contract
         IBananaswapV1Pair(pair).transferFrom(msg.sender, pair, liquidityToWithdraw_);
 
-        // pair.burn(to) // returns amts to return
         (tokensToWithdraw, ethToWidthraw) = IBananaswapV1Pair(pair).burn(msg.sender);
 
         // TODO require amts burned >= minAmts
     }
-    // safeTransfer() ?
+
+    function swap(
+        address token_,
+        uint256 tokensIn_,
+        uint256 minTokensOut_,
+        uint256 minEthOut_
+    ) external payable {
+        (uint256 tokenReserve, uint256 ethReserve) = BananaswapV1Library.getReserves(factory, token_);
+
+        // given an amount in, get the corresponding amount out, less fees
+        (uint256 tokensOut, uint256 ethOut) = tokensIn_ > 0
+            ? (0, BananaswapV1Library.quoteWithFees(tokensIn_, tokenReserve, ethReserve))
+            : (BananaswapV1Library.quoteWithFees(msg.value, ethReserve, tokenReserve), 0);
+
+        address pair = IBananaswapV1Factory(factory).getPair(token_);
+
+        IBananaswapV1Pair(pair).swap(tokensOut, ethOut, msg.sender);
+    }
 }
