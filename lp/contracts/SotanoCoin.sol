@@ -5,6 +5,9 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
+// TODO remove
+import "hardhat/console.sol";
+
 contract SotanoCoin is ERC20, Ownable {
     enum Phase {
         Closed,
@@ -167,19 +170,6 @@ contract SotanoCoin is ERC20, Ownable {
             _mint(treasuryAddress, transactionFee);
         }
     }
-
-    // TODO delete
-    // function transfer(address _to, uint256 _amount) public virtual override returns (bool) {
-    //     (uint256 amountToTransfer, uint256 transactionFee) = getTransferAndFeeAmounts(_amount);
-
-    //     _transfer(_msgSender(), _to, amountToTransfer);
-
-    //     if (transactionFee > 0) {
-    //         _transfer(_msgSender(), treasuryAddress, transactionFee);
-    //     }
-
-    //     return true;
-    // }
 
     function _transfer(
         address _to,

@@ -8,6 +8,7 @@ import type { BananaswapV1Router } from "../src/types/BananaswapV1Router";
 import type { SotanoCoin } from "../src/types/SotanoCoin";
 
 import { expect } from "chai";
+import { BigNumber as BigNumberType } from "ethers";
 
 const { utils, BigNumber } = ethers;
 const { parseEther } = utils;
@@ -61,6 +62,14 @@ const conductLiquidityDeposits = async (
         },
       );
   }
+};
+
+const getAmountOut = (amountIn: BigNumberType, reserveIn: BigNumberType, reserveOut: BigNumberType) => {
+  const amountInLessFee = amountIn.mul(997);
+  const numerator = amountInLessFee.mul(reserveOut);
+  const denominator = reserveIn.mul(1000).add(amountInLessFee);
+
+  return numerator.div(denominator);
 };
 
 describe("Unit tests", function () {
@@ -185,14 +194,19 @@ describe("Unit tests", function () {
     });
 
     describe("Swap", () => {
-      describe("Basic Functionality", () => {
+      describe("With Token Transaction Fees", () => {
         beforeEach(async () => {
           // Total Liquidity:
           //  Tokens: 84 (4 + 80)
           //  ETH: 21 (1 + 20)
           await conductLiquidityDeposits(accounts.slice(0, 10), 8, 2, router, token);
+          await token.toggleFees();
         });
         it("Token => ETH Swap", async () => {
+          /**
+           * Token Reserve should increase by 8 tokens less the tsx tax
+           * ETH reserve should decrease by equiv. of 8 tokens less the tsx tax
+           */
           const [startingTokenReserve, startingETHReserve] = await pair.getReserves();
 
           await token.connect(account2).approve(router.address, parseEther("8"));
@@ -205,22 +219,66 @@ describe("Unit tests", function () {
           // should have 9 tokens (25 - 8 - 8)
           expect(await token.balanceOf(account2.address)).to.equal(parseEther("9"));
 
+          const tokensInAfterFee = parseEther("8").sub(parseEther("8").mul(2).div(100));
+          const expectedEthOut = getAmountOut(tokensInAfterFee, startingTokenReserve, startingETHReserve);
+
           // wallet should have (8 - 0.3%) tokens worth of ETH more than before swap
           // using 0.6% to buffer for gas costs
-          const expectedEthOut = ((8 - 8 * 0.006) / 4).toString();
           const balAfterSwap = await account2.getBalance();
           const [endingTokenReserve, endingETHReserve] = await pair.getReserves();
 
-          expect(balAfterSwap.gte(balBeforeSwap.sub(parseEther(expectedEthOut)))).to.equal(true);
+          // user's ETH balance should be greater after the swap compared to before
+          expect(balAfterSwap.gte(balBeforeSwap.sub(expectedEthOut))).to.equal(true);
 
-          // tokenReserves should be 8 tokens greater
-          expect(endingTokenReserve.sub(parseEther("8"))).to.equal(startingTokenReserve);
-
-          // ethReserves should be about (2 - 0.3% of 8 tokens) less of ETH
-          expect(endingETHReserve.mul(1000).gte(startingETHReserve.mul(997))).to.equal(true);
+          // tokenReserves should be 8 tokens less fees greater
+          expect(endingTokenReserve).to.equal(startingTokenReserve.add(tokensInAfterFee));
+          // ethReserves should be equiv to 8 tokens less fees fewer
+          expect(endingETHReserve).to.equal(startingETHReserve.sub(expectedEthOut));
         });
 
-        // it("ETH => Token Swap", async () => {});
+        it("ETH => Token Swap", async () => {
+          // get wallet balance before swap
+
+          const [startingTokenReserve, startingETHReserve] = await pair.getReserves();
+          const tokenBalBeforeSwap = await token.balanceOf(account2.address);
+          const walletBalBeforeSwap = await account2.getBalance();
+
+          const ethIn = parseEther("2");
+          const expectedTokensOut = getAmountOut(ethIn, startingETHReserve, startingTokenReserve);
+          const expectedTokensOutLessFees = expectedTokensOut.sub(expectedTokensOut.mul(2).div(100));
+
+          // swap ETH for token
+          await router
+            .connect(account2)
+            .swapETHForTokensWithFee(token.address, expectedTokensOutLessFees.sub(parseEther("0.1")), { value: ethIn });
+
+          // wallet balance before swap should be more than 2 ETH greater than after swap
+
+          // account's token balance should be more than 7.8 tokens higher than before swap
+          const tokenBalAfterSwap = await token.balanceOf(account2.address);
+
+          // Test user's token balance
+          // Should be equal to starting balance + num tokens less tsx fees equiv to 2 ETH
+          expect(tokenBalAfterSwap).to.equal(tokenBalBeforeSwap.add(expectedTokensOutLessFees));
+
+          // Test user's ETH balance
+          // Balance + eth spent should be less than before swapping due to gas fees
+          const walletBalAfterSwap = await account2.getBalance();
+          expect(walletBalAfterSwap.add(ethIn).lt(walletBalBeforeSwap)).to.equal(true);
+
+          // Token Reserve should be startingTokenReserve + expectedTokens (excluding fees)
+          const [endingTokenReserve, endingETHReserve] = await pair.getReserves();
+          expect(endingTokenReserve).to.equal(startingTokenReserve.sub(expectedTokensOut));
+          // ETH reserve should be startingETHReserve - ethIn
+          expect(endingETHReserve).to.equal(startingETHReserve.add(ethIn));
+        });
+      });
+
+      describe("Without Token Transfer Fees", () => {
+        it("Token => ETH Swap", async () => {
+          // ending token reserve should equal starting token reserve
+          // expect(endingTokenReserve.sub(parseEther("8"))).to.equal(startingTokenReserve);
+        });
       });
     });
   });

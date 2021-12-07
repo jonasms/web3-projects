@@ -103,14 +103,12 @@ contract BananaswapV1Pair is BananaswapV1ERC20 {
         uint256 tokensIn = tokenBal > tokenReserve - tokensOut_ ? tokenBal - tokenReserve - tokensOut_ : 0;
         uint256 ethIn = ethBal > ethReserve - ethOut_ ? ethBal - ethReserve - ethOut_ : 0;
 
+        // console.log("TOKENS IN: ", tokensIn);
+        // console.log("ETH IN: ", ethIn);
+        // console.log("--");
         // console.log("TOKENS OUT: ", tokensOut_);
         // console.log("ETH OUT: ", ethOut_);
         // console.log("--");
-        // console.log("TOKEN BAL: ", tokenBal);
-        // console.log("ETH BAL: ", ethBal);
-        // console.log("--");
-        // console.log("TOKENS IN: ", tokensIn);
-        // console.log("ETH IN: ", ethIn);
 
         require(tokensIn > 0 || ethIn > 0, "BananaswapV1Pair::swap: INSUFFICIENT_AMOUNT_IN");
 
@@ -121,6 +119,12 @@ contract BananaswapV1Pair is BananaswapV1ERC20 {
             tokenBalLessFee * ethBalLessFee >= tokenReserve * ethReserve * 1000**2,
             "BananaswapV1Pair::swap: INVALID_K"
         );
+
+        // console.log("TOKEN START BAL: ", tokenReserve);
+        // console.log("TOKEN END BAL: ", tokenBal);
+        // console.log("ETH START BAL: ", ethReserve);
+        // console.log("ETH END BAL: ", ethBal);
+        // console.log("----------------------");
 
         _update(tokenBal, ethBal);
 

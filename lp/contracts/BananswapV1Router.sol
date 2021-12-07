@@ -111,14 +111,9 @@ contract BananaswapV1Router {
         uint256 tokensIn_,
         uint256 minEthOut_
     ) external {
-        // to support fees
-        // transfer tokens to pair
         address pair = IBananaswapV1Factory(factory).getPair(token_);
-        // IERC20(token_).transferFrom(msg.sender, pair, tokensIn_);
         BananaswapV1Library.transferFrom(token_, msg.sender, pair, tokensIn_);
 
-        // set actualTokensIn to num tokens received by pair
-        //  pair's balance - pair.tokenReserve
         (uint256 tokenReserve, uint256 ethReserve) = BananaswapV1Library.getReserves(factory, token_);
         uint256 tokenBal = IERC20(token_).balanceOf(pair);
         uint256 actualTokensIn = tokenBal - tokenReserve;
@@ -128,5 +123,29 @@ contract BananaswapV1Router {
         require(minEthOut_ >= ethOut, "BananaswapV1Router::swapTokensWithFeeForETH: INSUFFICIENT_ETH_OUT");
 
         _swap(pair, uint256(0), ethOut, msg.sender);
+    }
+
+    // TODO only use when token's fees are turned on?
+    function swapETHForTokensWithFee(address token_, uint256 minTokensOut_) external payable {
+        address pair = IBananaswapV1Factory(factory).getPair(token_);
+
+        // transfer ETH to pair
+        BananaswapV1Library.transferEth(pair, msg.value);
+
+        uint256 tokensBalBeforeSwap = IERC20(token_).balanceOf(msg.sender);
+
+        // given ethIn, get tokensOut
+        (uint256 tokenReserve, uint256 ethReserve) = BananaswapV1Library.getReserves(factory, token_);
+        uint256 tokensOut = BananaswapV1Library.getAmountOutLessFee(msg.value, ethReserve, tokenReserve);
+
+        _swap(pair, tokensOut, uint256(0), msg.sender);
+
+        uint256 tokensBalAfterSwap = IERC20(token_).balanceOf(msg.sender);
+        // Actual tokens sent to msg.sender. Equiv. to tokensOut less transaction fees.
+        uint256 actualTokensOut = tokensBalAfterSwap - tokensBalBeforeSwap;
+        require(
+            actualTokensOut >= minTokensOut_,
+            "BananaswapV1Router::swapETHForTokensWithFee: INSUFFICIENT_TOKENS_OUT"
+        );
     }
 }
