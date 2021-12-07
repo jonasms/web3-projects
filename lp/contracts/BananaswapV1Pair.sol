@@ -113,10 +113,10 @@ contract BananaswapV1Pair is BananaswapV1ERC20 {
         require(tokensIn > 0 || ethIn > 0, "BananaswapV1Pair::swap: INSUFFICIENT_AMOUNT_IN");
 
         // compare balances less fees to K
-        uint256 tokenBalLessFee = (tokenBal * 1000) - (tokensIn * 3);
-        uint256 ethBalLessFee = (ethBal * 1000) - (ethIn * 3);
+        uint256 tokenBalLessFee = (tokenBal * 100) - tokensIn;
+        uint256 ethBalLessFee = (ethBal * 100) - ethIn;
         require(
-            tokenBalLessFee * ethBalLessFee >= tokenReserve * ethReserve * 1000**2,
+            tokenBalLessFee * ethBalLessFee >= tokenReserve * ethReserve * 100**2,
             "BananaswapV1Pair::swap: INVALID_K"
         );
 

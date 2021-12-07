@@ -39,8 +39,8 @@ library BananaswapV1Library {
         uint256 reserveIn_,
         uint256 reserveOut_
     ) internal pure returns (uint256 amountOut) {
-        uint256 amountInLessFee = amountIn_ * 997;
-        amountOut = (amountInLessFee * reserveOut_) / ((reserveIn_ * 1000) + amountInLessFee);
+        uint256 amountInLessFee = amountIn_ * 99;
+        amountOut = (amountInLessFee * reserveOut_) / ((reserveIn_ * 100) + amountInLessFee);
     }
 
     // TODO using?
@@ -50,8 +50,8 @@ library BananaswapV1Library {
         uint256 reserveIn_,
         uint256 reserveOut_
     ) internal pure returns (uint256 amountOut) {
-        uint256 amountInLessFee = amountOut_ * 997;
-        amountOut = (amountInLessFee * reserveOut_) / (reserveIn_ * 1000) + amountInLessFee;
+        uint256 amountInLessFee = amountOut_ * 99;
+        amountOut = (amountInLessFee * reserveOut_) / (reserveIn_ * 100) + amountInLessFee;
     }
 
     // copied from https://github.com/Uniswap/solidity-lib/blob/master/contracts/libraries/TransferHelper.sol

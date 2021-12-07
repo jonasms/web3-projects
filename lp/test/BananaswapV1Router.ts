@@ -47,9 +47,6 @@ const conductLiquidityDeposits = async (
     // permit token transfer
     await token.connect(investor).approve(router.address, parseEther(_tokenAmt));
 
-    // console.log(`BALANCE ${i}: `, (await token.balanceOf(investor.address)).toString());
-    // console.log(`WALLET BALANCE ${i}: `, (await investor.getBalance()).toString());
-
     await router
       .connect(investor)
       .depositLiquidity(
@@ -65,9 +62,9 @@ const conductLiquidityDeposits = async (
 };
 
 const getAmountOut = (amountIn: BigNumberType, reserveIn: BigNumberType, reserveOut: BigNumberType) => {
-  const amountInLessFee = amountIn.mul(997);
+  const amountInLessFee = amountIn.mul(99);
   const numerator = amountInLessFee.mul(reserveOut);
-  const denominator = reserveIn.mul(1000).add(amountInLessFee);
+  const denominator = reserveIn.mul(100).add(amountInLessFee);
 
   return numerator.div(denominator);
 };
