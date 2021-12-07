@@ -120,7 +120,7 @@ contract BananaswapV1Router {
 
         uint256 ethOut = BananaswapV1Library.getAmountOutLessFee(actualTokensIn, tokenReserve, ethReserve);
 
-        require(minEthOut_ >= ethOut, "BananaswapV1Router::swapTokensWithFeeForETH: INSUFFICIENT_ETH_OUT");
+        require(ethOut >= minEthOut_, "BananaswapV1Router::swapTokensWithFeeForETH: INSUFFICIENT_ETH_OUT");
 
         _swap(pair, uint256(0), ethOut, msg.sender);
     }
