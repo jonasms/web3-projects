@@ -33,13 +33,25 @@ library BananaswapV1Library {
         amountB = (amountA_ * reserveB_) / reserveA_;
     }
 
-    function quoteWithFees(
+    // TODO using?
+    // given an amount in less fees, returns the corresponding amount out required to maintain K
+    function getAmountOutLessFee(
         uint256 amountIn_,
         uint256 reserveIn_,
         uint256 reserveOut_
     ) internal pure returns (uint256 amountOut) {
         uint256 amountInLessFee = amountIn_ * 997;
         amountOut = (reserveIn_ * reserveOut_) / ((reserveIn_ * 1000) + amountInLessFee);
+    }
+
+    // given an amount out less fees, returns the corresponding amount in required to maintain K
+    function getAmountInLessFee(
+        uint256 amountOut_,
+        uint256 reserveIn_,
+        uint256 reserveOut_
+    ) internal pure returns (uint256 amountOut) {
+        uint256 amountInLessFee = amountOut_ * 997;
+        amountOut = (amountInLessFee * reserveOut_) / (reserveIn_ * 1000) + amountInLessFee;
     }
 
     // copied from https://github.com/Uniswap/solidity-lib/blob/master/contracts/libraries/TransferHelper.sol

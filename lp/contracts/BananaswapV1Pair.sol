@@ -86,8 +86,8 @@ contract BananaswapV1Pair is BananaswapV1ERC20 {
         uint256 ethOut_,
         address to_
     ) external {
-        require(tokensOut_ > 0 || ethOut_ > 0, "Bananaswap::swap: INSUFFICIENT_AMOUNT_IN");
-        require(tokenReserve >= tokensOut_ && ethReserve >= ethOut_, "Bananaswap::swap: INSUFFICIENT_LIQUIDITY");
+        require(tokensOut_ > 0 || ethOut_ > 0, "BananaswapV1Pair::swap: INSUFFICIENT_AMOUNT_OUT");
+        require(tokenReserve >= tokensOut_ && ethReserve >= ethOut_, "BananaswapV1Pair::swap: INSUFFICIENT_LIQUIDITY");
 
         if (tokensOut_ > 0) {
             BananaswapV1Library.transfer(token, to_, tokensOut_);
@@ -98,17 +98,29 @@ contract BananaswapV1Pair is BananaswapV1ERC20 {
         }
 
         uint256 tokenBal = IERC20(token).balanceOf(address(this));
-        uint256 ethBal = address(this).balanace;
+        uint256 ethBal = address(this).balance;
 
         uint256 tokensIn = tokenBal > tokenReserve - tokensOut_ ? tokenBal - tokenReserve - tokensOut_ : 0;
         uint256 ethIn = ethBal > ethReserve - ethOut_ ? ethBal - ethReserve - ethOut_ : 0;
 
-        require(tokensIn > 0 || ethIn > 0, "Bananaswap::swap: INSUFFICIENT_AMOUNT_IN");
+        // console.log("TOKENS OUT: ", tokensOut_);
+        // console.log("ETH OUT: ", ethOut_);
+        // console.log("--");
+        // console.log("TOKEN BAL: ", tokenBal);
+        // console.log("ETH BAL: ", ethBal);
+        // console.log("--");
+        // console.log("TOKENS IN: ", tokensIn);
+        // console.log("ETH IN: ", ethIn);
+
+        require(tokensIn > 0 || ethIn > 0, "BananaswapV1Pair::swap: INSUFFICIENT_AMOUNT_IN");
 
         // compare balances less fees to K
         uint256 tokenBalLessFee = (tokenBal * 1000) - (tokensIn * 3);
         uint256 ethBalLessFee = (ethBal * 1000) - (ethIn * 3);
-        require(tokenBalLessFee * ethBalLessFee >= tokenReserve * ethReserve * 1000**2, "Bananaswap::swap: INVALID_K");
+        require(
+            tokenBalLessFee * ethBalLessFee >= tokenReserve * ethReserve * 1000**2,
+            "BananaswapV1Pair::swap: INVALID_K"
+        );
 
         _update(tokenBal, ethBal);
 

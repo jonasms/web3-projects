@@ -8,6 +8,12 @@ interface IBananaswapV1Pair {
 
     function burn(address to_) external returns (uint256 tokenAmt, uint256 ethAmt);
 
+    function swap(
+        uint256 tokensOut_,
+        uint256 ethOut_,
+        address to_
+    ) external;
+
     function transferFrom(
         address from_,
         address to_,

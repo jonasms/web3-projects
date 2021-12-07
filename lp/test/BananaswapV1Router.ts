@@ -38,7 +38,6 @@ const conductLiquidityDeposits = async (
 ) => {
   const _tokenAmt = tokenAmt.toString();
   const _ethAmt = ethAmt.toString();
-  const liquidityGrants = [];
 
   let investor;
 
@@ -46,22 +45,22 @@ const conductLiquidityDeposits = async (
     investor = investors[i];
     // permit token transfer
     await token.connect(investor).approve(router.address, parseEther(_tokenAmt));
-    liquidityGrants.push(
-      await router
-        .connect(investor)
-        .depositLiquidity(
-          token.address,
-          parseEther(_tokenAmt),
-          parseEther((tokenAmt / 2).toString()),
-          parseEther((ethAmt / 2).toString()),
-          {
-            value: parseEther(_ethAmt),
-          },
-        ),
-    );
-  }
 
-  return liquidityGrants.map(tx => tx.value.toString());
+    // console.log(`BALANCE ${i}: `, (await token.balanceOf(investor.address)).toString());
+    // console.log(`WALLET BALANCE ${i}: `, (await investor.getBalance()).toString());
+
+    await router
+      .connect(investor)
+      .depositLiquidity(
+        token.address,
+        parseEther(_tokenAmt),
+        parseEther((tokenAmt / 2).toString()),
+        parseEther((ethAmt / 2).toString()),
+        {
+          value: parseEther(_ethAmt),
+        },
+      );
+  }
 };
 
 describe("Unit tests", function () {
@@ -85,7 +84,7 @@ describe("Unit tests", function () {
       // deploy Sotano Coin
       const tokenArtifact: Artifact = await artifacts.readArtifact("SotanoCoin");
       token = <SotanoCoin>await waffle.deployContract(admin, tokenArtifact, [treasury.address]);
-      console.log("TOKEN ADDRESS: ", token.address);
+      //   console.log("TOKEN ADDRESS: ", token.address);
 
       // TODO conduct ico
       await conductIco(token, accounts);
@@ -93,18 +92,18 @@ describe("Unit tests", function () {
       // deploy Factory
       const factoryArtifact: Artifact = await artifacts.readArtifact("BananaswapV1Factory");
       factory = <BananaswapV1Factory>await waffle.deployContract(admin, factoryArtifact);
-      console.log("FACTORY ADDRESS: ", factory.address);
+      //   console.log("FACTORY ADDRESS: ", factory.address);
 
       // deploy Router
       const routerArtifact: Artifact = await artifacts.readArtifact("BananaswapV1Router");
       router = <BananaswapV1Router>await waffle.deployContract(admin, routerArtifact, [factory.address]);
-      console.log("ROUTER ADDRESS: ", router.address);
+      //   console.log("ROUTER ADDRESS: ", router.address);
 
       // grant allowance via SotanoCoin
       await token.connect(account1).approve(router.address, parseEther("4"));
       const allowance = await token.connect(account1).allowance(account1.address, router.address);
 
-      console.log("ALLOWANCE: ", allowance.toString());
+      //   console.log("ALLOWANCE: ", allowance.toString());
 
       // deploy Pair by adding Liquidity
       await router
@@ -117,7 +116,7 @@ describe("Unit tests", function () {
 
       const pairContract = await ethers.getContractFactory("BananaswapV1Pair");
       pair = await pairContract.attach(pairAddress);
-      console.log("PAIR ADDRESS: ", pairAddress);
+      //   console.log("PAIR ADDRESS: ", pairAddress);
     });
 
     describe("Pairs", () => {
@@ -138,6 +137,7 @@ describe("Unit tests", function () {
       // TODO test multiple deposits (tested below?)
       // TODO test bad token/eth ratio
     });
+
     describe("Withdraw Liquidity", () => {
       beforeEach(async () => {
         // Total Liquidity:
@@ -148,6 +148,11 @@ describe("Unit tests", function () {
 
       // No swaps
       it("Liquidity withdrawl should result in expected tokens", async () => {
+        // const [startingTokenReserve, startingETHReserve] = await pair.getReserves();
+
+        // console.log("STARTING TOKEN RESERVE: ", startingTokenReserve.toString());
+        // console.log("STARTING ETH RESERVE: ", startingETHReserve.toString());
+
         const totalSupply = await pair.totalSupply();
         expect(await pair.getReserves()).to.deep.equal([parseEther("84"), parseEther("21")]);
         // TODO place test below somehwere
@@ -176,6 +181,46 @@ describe("Unit tests", function () {
 
         // SOT balance restored to original 25
         expect(await token.balanceOf(account2.address)).to.equal(parseEther("25"));
+      });
+    });
+
+    describe("Swap", () => {
+      describe("Basic Functionality", () => {
+        beforeEach(async () => {
+          // Total Liquidity:
+          //  Tokens: 84 (4 + 80)
+          //  ETH: 21 (1 + 20)
+          await conductLiquidityDeposits(accounts.slice(0, 10), 8, 2, router, token);
+        });
+        it("Token => ETH Swap", async () => {
+          const [startingTokenReserve, startingETHReserve] = await pair.getReserves();
+
+          await token.connect(account2).approve(router.address, parseEther("8"));
+
+          const balBeforeSwap = await account2.getBalance();
+
+          // account2 swaps 8 tokens
+          await router.connect(account2).swapTokensWithFeeForETH(token.address, parseEther("8"), parseEther("1.9"));
+
+          // should have 9 tokens (25 - 8 - 8)
+          expect(await token.balanceOf(account2.address)).to.equal(parseEther("9"));
+
+          // wallet should have (8 - 0.3%) tokens worth of ETH more than before swap
+          // using 0.6% to buffer for gas costs
+          const expectedEthOut = ((8 - 8 * 0.006) / 4).toString();
+          const balAfterSwap = await account2.getBalance();
+          const [endingTokenReserve, endingETHReserve] = await pair.getReserves();
+
+          expect(balAfterSwap.gte(balBeforeSwap.sub(parseEther(expectedEthOut)))).to.equal(true);
+
+          // tokenReserves should be 8 tokens greater
+          expect(endingTokenReserve.sub(parseEther("8"))).to.equal(startingTokenReserve);
+
+          // ethReserves should be about (2 - 0.3% of 8 tokens) less of ETH
+          expect(endingETHReserve.mul(1000).gte(startingETHReserve.mul(997))).to.equal(true);
+        });
+
+        // it("ETH => Token Swap", async () => {});
       });
     });
   });

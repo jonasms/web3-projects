@@ -17,9 +17,9 @@ contract BananaswapV1ERC20 is IBananaswapV1ERC20 {
     }
 
     function _burn(address from_, uint256 value_) internal {
-        require(from_ != address(0), "Bananswap::_burn: ZERO_ADDRESS");
+        require(from_ != address(0), "BananswapV1ERC20::_burn: ZERO_ADDRESS");
         uint256 amount = balanceOf[from_];
-        require(amount >= value_, "Bananswap::_burn: INSUFFICIENT_FUNDS");
+        require(amount >= value_, "BananswapV1ERC20::_burn: INSUFFICIENT_FUNDS");
         balanceOf[from_] -= value_;
         totalSupply -= value_;
     }
@@ -32,15 +32,13 @@ contract BananaswapV1ERC20 is IBananaswapV1ERC20 {
         address to_,
         uint256 value_
     ) external returns (bool) {
-        require(from_ != address(0), "Bananswap::transferFrom: TRANSFER_FROM_ZERO_ADDRESS");
-        require(to_ != address(0), "Bananswap::transferFrom: TRANSFER_TO_ZERO_ADDRESS");
-        require(allowance[from_][to_] >= value_, "Bananswap::transferFrom: INSUFFICIENT_ALLOWANCE");
+        require(from_ != address(0), "BananswapV1ERC20::transferFrom: TRANSFER_FROM_ZERO_ADDRESS");
+        require(to_ != address(0), "BananswapV1ERC20::transferFrom: TRANSFER_TO_ZERO_ADDRESS");
+        require(allowance[from_][to_] >= value_, "BananswapV1ERC20::transferFrom: INSUFFICIENT_ALLOWANCE");
 
         // reduce allowance by value
         allowance[from_][to_] -= value_;
 
-        console.log("CUR BAL: ", balanceOf[from_]);
-        console.log("VALUE: ", value_);
         // transfer
         // TODO use _transfer()?
         balanceOf[from_] -= value_;

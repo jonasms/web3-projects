@@ -4,6 +4,7 @@ pragma solidity >=0.8.4;
 import "./interfaces/IBananaswapV1Factory.sol";
 import "./interfaces/IBananaswapV1Pair.sol";
 import "./libraries/BananaswapV1Library.sol";
+import "@openzeppelin/contracts/interfaces/IERC20.sol";
 
 // TODO remove
 import "hardhat/console.sol";
@@ -95,21 +96,37 @@ contract BananaswapV1Router {
         // TODO require amts burned >= minAmts
     }
 
-    function swap(
+    function _swap(
+        address pair_,
+        uint256 tokensOut_,
+        uint256 ethOut_,
+        address to_
+    ) internal {
+        IBananaswapV1Pair(pair_).swap(tokensOut_, ethOut_, to_);
+    }
+
+    // TODO only use when token's fees are turned on?
+    function swapTokensWithFeeForETH(
         address token_,
         uint256 tokensIn_,
-        uint256 minTokensOut_,
         uint256 minEthOut_
-    ) external payable {
-        (uint256 tokenReserve, uint256 ethReserve) = BananaswapV1Library.getReserves(factory, token_);
-
-        // given an amount in, get the corresponding amount out, less fees
-        (uint256 tokensOut, uint256 ethOut) = tokensIn_ > 0
-            ? (0, BananaswapV1Library.quoteWithFees(tokensIn_, tokenReserve, ethReserve))
-            : (BananaswapV1Library.quoteWithFees(msg.value, ethReserve, tokenReserve), 0);
-
+    ) external {
+        // to support fees
+        // transfer tokens to pair
         address pair = IBananaswapV1Factory(factory).getPair(token_);
+        // IERC20(token_).transferFrom(msg.sender, pair, tokensIn_);
+        BananaswapV1Library.transferFrom(token_, msg.sender, pair, tokensIn_);
 
-        IBananaswapV1Pair(pair).swap(tokensOut, ethOut, msg.sender);
+        // set actualTokensIn to num tokens received by pair
+        //  pair's balance - pair.tokenReserve
+        (uint256 tokenReserve, uint256 ethReserve) = BananaswapV1Library.getReserves(factory, token_);
+        uint256 tokenBal = IERC20(token_).balanceOf(pair);
+        uint256 actualTokensIn = tokenBal - tokenReserve;
+
+        uint256 ethOut = BananaswapV1Library.getAmountOutLessFee(actualTokensIn, tokenReserve, ethReserve);
+
+        require(minEthOut_ >= ethOut, "BananaswapV1Router::swapTokensWithFeeForETH: INSUFFICIENT_ETH_OUT");
+
+        _swap(pair, uint256(0), ethOut, msg.sender);
     }
 }
