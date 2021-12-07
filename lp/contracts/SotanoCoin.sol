@@ -172,8 +172,8 @@ contract SotanoCoin is ERC20, Ownable {
     }
 
     function _transfer(
-        address _to,
         address _from,
+        address _to,
         uint256 _amount
     ) internal virtual override {
         if (feesEnabled) {
@@ -181,7 +181,7 @@ contract SotanoCoin is ERC20, Ownable {
             _amount = _amount - taxAmount;
             super._transfer(_to, treasuryAddress, taxAmount);
         }
-        super._transfer(_to, _from, _amount);
+        super._transfer(_from, _to, _amount);
     }
 
     function getTransferAndFeeAmounts(uint256 _amount) internal view returns (uint256, uint256) {
@@ -196,6 +196,24 @@ contract SotanoCoin is ERC20, Ownable {
         }
 
         return (amountToMint, transactionFee);
+    }
+
+    /**
+        @notice: only the treasury can call this method.
+        @notice: requires sending ETH with this method execution.
+        @notice: requires the treasury to transfer SOT to the contract before executing withdraw().
+     */
+    function withdraw(
+        address _to,
+        uint256 _ethAmount,
+        string memory _signature,
+        bytes memory _data
+    ) external payable {
+        require(msg.sender == treasuryAddress, "SotanoCoin::withdraw: ONLY_TREASURY");
+        bytes memory callData = abi.encodePacked(bytes4(keccak256(bytes(signature_))), _data);
+
+        (bool success, ) = to_.call{ value: _ethAmount }(callData);
+        require(success, "SotanoCoin::withdraw: TRANSACTION_FAILED");
     }
 
     /** UTILS */
