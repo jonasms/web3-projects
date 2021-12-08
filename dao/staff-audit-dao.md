@@ -12,19 +12,12 @@ This is a good solution. I think it would work! More extensive tests would be th
 
 ## issue-1
 
-**[Medium]** Incorrect handling of quorum
-
-- CollectorDAO:47 in the state function a proposal is defeated if the for votes are less than the quorum. Votes against and abstentions should also be counted in deciding whether the quorum was reached.
-
-
-## issue-2
-
 **[Medium]** Non EOA accounts cannot vote
 
 The only way to vote is by signature. However, only EOAs can create signatures, and the contract does not prevent non-EOA accounts from becoming members. This situation increases quorum with members that cannot vote.
 
 
-## issue-3
+## issue-2
 
 **[Low]** castVotesBulk is brittle
 
@@ -33,7 +26,7 @@ If any one vote/signature passed to `castVotesBulk` is invalid, the entire trans
 Consider letting invalid votes/signatures silently fail, and having off-chain applications listen for `VoteCast` events.
 
 
-## issue-4
+## issue-3
 
 **[Code Quality]** Unnecessarily complicated calculation
 
@@ -48,8 +41,8 @@ Consider letting invalid votes/signatures silently fail, and having off-chain ap
 | Late                       | - |
 | Unfinished features        | - |
 | Extra features             | - |
-| Vulnerability              | 5 |
+| Vulnerability              | 4 |
 | Unanswered design exercise | - |
 
-Total: 5
+Total: 4
 Good job!
