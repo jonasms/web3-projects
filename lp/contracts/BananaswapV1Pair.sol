@@ -15,9 +15,16 @@ contract BananaswapV1Pair is BananaswapV1ERC20 {
     address token;
     uint256 tokenReserve;
     uint256 ethReserve;
+    bool locked;
 
     constructor(address token_) {
         token = token_;
+    }
+
+    modifier lock() {
+        locked = true;
+        _;
+        locked = false;
     }
 
     function getReserves() public view returns (uint256, uint256) {
@@ -25,7 +32,7 @@ contract BananaswapV1Pair is BananaswapV1ERC20 {
     }
 
     // TODO lock
-    function mint(address to_) external returns (uint256 liquidity) {
+    function mint(address to_) external lock returns (uint256 liquidity) {
         // get qty of deposits
         uint256 tokenBal = IERC20(token).balanceOf(address(this));
         uint256 _ethBal = address(this).balance;
@@ -52,7 +59,7 @@ contract BananaswapV1Pair is BananaswapV1ERC20 {
     }
 
     // TODO lock
-    function burn(address to_) external returns (uint256 tokenAmt, uint256 ethAmt) {
+    function burn(address to_) external lock returns (uint256 tokenAmt, uint256 ethAmt) {
         // get liquidity burned
         uint256 liquidityToBurn = balanceOf[address(this)];
         uint256 tokenBal = IERC20(token).balanceOf(address(this));
@@ -79,7 +86,7 @@ contract BananaswapV1Pair is BananaswapV1ERC20 {
         uint256 tokensOut_,
         uint256 ethOut_,
         address to_
-    ) external {
+    ) external lock {
         require(tokensOut_ > 0 || ethOut_ > 0, "BananaswapV1Pair::swap: INSUFFICIENT_AMOUNT_OUT");
         require(tokenReserve >= tokensOut_ && ethReserve >= ethOut_, "BananaswapV1Pair::swap: INSUFFICIENT_LIQUIDITY");
 
