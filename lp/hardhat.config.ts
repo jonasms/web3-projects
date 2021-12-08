@@ -16,7 +16,8 @@ dotenvConfig({ path: resolve(__dirname, "./.env") });
 
 const chainIds = {
   goerli: 5,
-  hardhat: 31337,
+  // hardhat: 31337,
+  hardhat: 1337,
   kovan: 42,
   mainnet: 1,
   rinkeby: 4,
@@ -38,10 +39,12 @@ function getChainConfig(network: keyof typeof chainIds): NetworkUserConfig {
   const url: string = "https://" + network + ".infura.io/v3/" + infuraApiKey;
   return {
     accounts: {
-      count: 20,
+      count: 10,
       mnemonic,
       path: "m/44'/60'/0'/0",
     },
+
+    // accounts: [`0x${process.env.DEV_WALLET_PRIVATE_KEY}`],
     chainId: chainIds[network],
     url,
   };
@@ -58,7 +61,8 @@ const config: HardhatUserConfig = {
   networks: {
     hardhat: {
       accounts: {
-        mnemonic,
+        // mnemonic,
+        count: 40,
       },
       chainId: chainIds.hardhat,
     },

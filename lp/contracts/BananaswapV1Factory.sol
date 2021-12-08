@@ -17,11 +17,18 @@ contract BananaswapV1Factory {
     }
 
     function createPair(address token) external returns (address pair) {
-        // (address token0, address token1) = BananaswapV1Library.sortTokens(token, tokenB_);
         require(getPair[token] == address(0), "BananaswapV1Factory.createPair(): PAIR_EXISTS");
+        /**
+            TODO
+            Use CREATE2
+            1. Gas efficiency: Generates deterministic contract address that can be generated elsewhere
+                instead of using a transaction to fetch the address.
+            
+            2. Gas efficiency: Doesn't require importing the BananaswapV1Pair contract into this factory contract,
+                thus reducing gas costs on deployment significantly.
+        */
         pair = address(new BananaswapV1Pair(token));
         getPair[token] = pair;
-        // getPair[token1][token0] = pair;
         pairs.push(pair);
 
         emit PairCreated(token, pair, pairs.length);

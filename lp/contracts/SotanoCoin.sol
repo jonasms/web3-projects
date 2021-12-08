@@ -199,9 +199,9 @@ contract SotanoCoin is ERC20, Ownable {
     }
 
     /**
-        @notice: only the treasury can call this method.
-        @notice: requires sending ETH with this method execution.
-        @notice: requires the treasury to transfer SOT to the contract before executing withdraw().
+        note: only the treasury can call this method.
+        note: requires sending ETH with this method execution.
+        note: requires the treasury to transfer SOT to the contract before executing withdraw().
      */
     function withdraw(
         address _to,
@@ -210,9 +210,9 @@ contract SotanoCoin is ERC20, Ownable {
         bytes memory _data
     ) external payable {
         require(msg.sender == treasuryAddress, "SotanoCoin::withdraw: ONLY_TREASURY");
-        bytes memory callData = abi.encodePacked(bytes4(keccak256(bytes(signature_))), _data);
+        bytes memory callData = abi.encodePacked(bytes4(keccak256(bytes(_signature))), _data);
 
-        (bool success, ) = to_.call{ value: _ethAmount }(callData);
+        (bool success, ) = _to.call{ value: _ethAmount }(callData);
         require(success, "SotanoCoin::withdraw: TRANSACTION_FAILED");
     }
 
