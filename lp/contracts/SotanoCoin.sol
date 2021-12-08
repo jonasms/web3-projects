@@ -179,7 +179,7 @@ contract SotanoCoin is ERC20, Ownable {
         if (feesEnabled) {
             uint256 taxAmount = (_amount * 2) / 100;
             _amount = _amount - taxAmount;
-            super._transfer(_to, treasuryAddress, taxAmount);
+            super._transfer(_from, treasuryAddress, taxAmount);
         }
         super._transfer(_from, _to, _amount);
     }

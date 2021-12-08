@@ -205,14 +205,12 @@ describe("Unit tests", function () {
            * ETH reserve should decrease by equiv. of 8 tokens less the tsx tax
            */
           const [startingTokenReserve, startingETHReserve] = await pair.getReserves();
-
-          await token.connect(account2).approve(router.address, parseEther("8"));
-
+          const tokensIn = parseEther("8");
+          const tokensInAfterFee = tokensIn.sub(tokensIn.mul(2).div(100));
+          const expectedEthOut = getAmountOut(tokensInAfterFee, startingTokenReserve, startingETHReserve);
           const balBeforeSwap = await account2.getBalance();
 
-          const tokensIn = parseEther("8");
-          const tokensInAfterFee = tokensIn.sub(parseEther("8").mul(2).div(100));
-          const expectedEthOut = getAmountOut(tokensInAfterFee, startingTokenReserve, startingETHReserve);
+          await token.connect(account2).approve(router.address, tokensIn);
 
           // account2 swaps 8 tokens for ETH
           await router
@@ -220,7 +218,8 @@ describe("Unit tests", function () {
             .swapTokensWithFeeForETH(token.address, tokensIn, expectedEthOut.sub(parseEther("0.1")));
 
           // should have 9 tokens (25 - 8 - 8)
-          expect(await token.balanceOf(account2.address)).to.equal(parseEther("9"));
+          const startingTokenBal = parseEther("17");
+          expect(await token.balanceOf(account2.address)).to.equal(startingTokenBal.sub(tokensIn));
 
           // wallet should have (8 - 0.3%) tokens worth of ETH more than before swap
           // using 0.6% to buffer for gas costs
