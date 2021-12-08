@@ -1,114 +1,54 @@
-# Solidity Template
+# Liquidity Pool Project README
 
-My favorite setup for writing Solidity smart contracts.
+## Design Exercise
 
-- [Hardhat](https://github.com/nomiclabs/hardhat): compile and run the smart contracts on a local development network
-- [TypeChain](https://github.com/ethereum-ts/TypeChain): generate TypeScript types for smart contracts
-- [Ethers](https://github.com/ethers-io/ethers.js/): renowned Ethereum library and wallet implementation
-- [Waffle](https://github.com/EthWorks/Waffle): tooling for writing comprehensive smart contract tests
-- [Solhint](https://github.com/protofire/solhint): linter
-- [Solcover](https://github.com/sc-forks/solidity-coverage): code coverage
-- [Prettier Plugin Solidity](https://github.com/prettier-solidity/prettier-plugin-solidity): code formatter
+**How would you extend your LP contract to award additional rewards – say, a separate ERC-20 token – to further incentivize liquidity providers to deposit into your pool?**
 
-This is a GitHub template, which means you can reuse it as many times as you want. You can do that by clicking the "Use this
-template" button at the top of the page.
+Hook pattern:
 
-## Usage
+1. Add a virtual (i.e. overridable) method, perhaps named `_transfer()`, to `BananaswapV1Pair::mint` and `BananaswapV1Pair::burn`.
 
-### Pre Requisites
+2. Overwrite `BananaswapV1Pair::_transfer` in `BananaswapV1Router` in such a way that calculates the award tokens to be distributed and executes the transactions.
 
-Before running any command, you need to create a `.env` file and set a BIP-39 compatible mnemonic as an environment
-variable. Follow the example in `.env.example`. If you don't already have a mnemonic, use this [website](https://iancoleman.io/bip39/) to generate one.
+This pattern would enable an existing pool to add this feature just by deploying a new Router contract. Furthermore, this pattern would allow for granting award tokens on mint, burn, or both.
 
-Then, proceed with installing dependencies:
+Adding separate hooks for `BananaswapV1Pair::mint` and `BananaswapV1Pair::burn` may work better, (e.g. `BananaswapV1Pair::_onMint` and `BananaswapV1Pair::_onBurn`).
 
-```sh
-yarn install
-```
+## Notes to auditor
 
-### Compile
+### No Front End Extension
 
-Compile the smart contracts with Hardhat:
+As I'm familiar with front end development and rather focus on smart contracts, I decided against spending the time to extend the front end.
 
-```sh
-$ yarn compile
-```
+### Using a factory; perhaps out of spec
 
-### TypeChain
+I'm not sure if using a factory to create Pair contracts is out of spec. I decided to do so because I wanted to deepen my familiarity with factories.
 
-Compile the smart contracts and generate TypeChain artifacts:
+## Deployed Contracts (Rinkeby Network)
 
-```sh
-$ yarn typechain
-```
+Token Contract: 0x388154F2dBe394F2aE2124d4E93b0D81A1BC2516
+BananaswapV1Factory: 0x684220239c61d8cb784f339FC0562b7A54B2c354
+BananaswapV1Router: 0x5c2722375dC9fba306258764d0d2Fc3b58B2DBA8
+BananaswapV1Pair:
 
-### Lint Solidity
+(note: the Pair contract is deployed via `BananaswapV1Router::depositLiquidity`. As doing so on a testnet (or the mainnet) effectively requires a UI compatable w/ a wallet, I didn't deploy the Pair contract to Rinkeby.)
 
-Lint the Solidity code:
+## Changes I would make given more time
 
-```sh
-$ yarn lint:sol
-```
+### Use CREATE2 in BananaswapV1Factory::createPair when creating a new pair contract.
 
-### Lint TypeScript
+As CREATE2 produces contracts with a deterministic address, Pair contract addresses can be fetched without making a transaction. Currently, Pair contract addresses are fetched using `BananaswapV1Factory::getPair` which instantiates a transaction.
 
-Lint the TypeScript code:
+### Create functions for swapping Tokens for ETH, and vice versa, that don't support Token transaction fees.
 
-```sh
-$ yarn lint:ts
-```
+Currently, the only two methods in `BananaswapV1Router` for swapping Tokens <=> ETH support Token transaction fees. While I believe they both would work when token fees are turned off, the extra checks they made in order to account for the fees would unecessarily increase gas costs.
 
-### Test
+Given more time, I would implement swap functions that don't take into account Token transaction fees. The frontend would need to only call them when the Token is not taxing transactions -- otherwise, I expect, the swaps would fail, invoking the following error: `BananaswapV1Pair::swap: INVALID_K`.
 
-Run the Mocha tests:
+### Implement the **lock** modifier pattern for the following methods
 
-```sh
-$ yarn test
-```
+1. `BananaswapV1Pair::mint`
+2. `BananaswapV1Pair::burn`
+3. `BananaswapV1Pair::swap`
 
-### Coverage
-
-Generate the code coverage report:
-
-```sh
-$ yarn coverage
-```
-
-### Report Gas
-
-See the gas usage per unit test and average gas per method call:
-
-```sh
-$ REPORT_GAS=true yarn test
-```
-
-### Clean
-
-Delete the smart contract artifacts, the coverage reports and the Hardhat cache:
-
-```sh
-$ yarn clean
-```
-
-### Deploy
-
-Deploy the contracts to Hardhat Network:
-
-```sh
-$ yarn deploy --greeting "Bonjour, le monde!"
-```
-
-## Syntax Highlighting
-
-If you use VSCode, you can enjoy syntax highlighting for your Solidity code via the
-[vscode-solidity](https://github.com/juanfranblanco/vscode-solidity) extension. The recommended approach to set the
-compiler version is to add the following fields to your VSCode user settings:
-
-```json
-{
-  "solidity.compileUsingRemoteVersion": "v0.8.4+commit.c7e474f2",
-  "solidity.defaultCompiler": "remote"
-}
-```
-
-Where of course `v0.8.4+commit.c7e474f2` can be replaced with any other version.
+As each of the methods above is deal with moving funds AND is making calls to external, unknown, contracts, the `lock` pattern would protect against re-entrancy attacks. As are, these methods are exposed to such attacks.
