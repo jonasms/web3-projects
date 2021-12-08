@@ -15,7 +15,6 @@ contract BananaswapV1Pair is BananaswapV1ERC20 {
     address token;
     uint256 tokenReserve;
     uint256 ethReserve;
-    uint256 ethBalance; // TODO just use native balance?
 
     constructor(address token_) {
         token = token_;
@@ -25,22 +24,17 @@ contract BananaswapV1Pair is BananaswapV1ERC20 {
         return (tokenReserve, ethReserve);
     }
 
+    // TODO lock
     function mint(address to_) external returns (uint256 liquidity) {
         // get qty of deposits
         uint256 tokenBal = IERC20(token).balanceOf(address(this));
-        uint256 _ethBal = ethBalance;
+        uint256 _ethBal = address(this).balance;
         uint256 _tokenReserve = tokenReserve;
         uint256 _ethReserve = ethReserve;
         uint256 _totalSupply = totalSupply;
 
         uint256 tokenAmt = tokenBal - _tokenReserve;
         uint256 ethAmt = _ethBal - _ethReserve;
-
-        // console.log("TOTAL SUPPLY: ", _totalSupply);
-        // console.log("TOKEN RESERVE: ", _tokenReserve);
-        // console.log("TOKENS CONTRIBUTED: ", tokenAmt);
-        // console.log("ETH RESERVE: ", _ethReserve);
-        // console.log("ETH CONTRIBUTED: ", ethAmt);
 
         // calculate liquidity to grant to LP
         // handle initial liquidity deposit
@@ -103,13 +97,6 @@ contract BananaswapV1Pair is BananaswapV1ERC20 {
         uint256 tokensIn = tokenBal > tokenReserve - tokensOut_ ? tokenBal - tokenReserve - tokensOut_ : 0;
         uint256 ethIn = ethBal > ethReserve - ethOut_ ? ethBal - ethReserve - ethOut_ : 0;
 
-        // console.log("TOKENS IN: ", tokensIn);
-        // console.log("ETH IN: ", ethIn);
-        // console.log("--");
-        // console.log("TOKENS OUT: ", tokensOut_);
-        // console.log("ETH OUT: ", ethOut_);
-        // console.log("--");
-
         require(tokensIn > 0 || ethIn > 0, "BananaswapV1Pair::swap: INSUFFICIENT_AMOUNT_IN");
 
         // compare balances less fees to K
@@ -120,24 +107,9 @@ contract BananaswapV1Pair is BananaswapV1ERC20 {
             "BananaswapV1Pair::swap: INVALID_K"
         );
 
-        // console.log("TOKEN START BAL: ", tokenReserve);
-        // console.log("TOKEN END BAL: ", tokenBal);
-        // console.log("ETH START BAL: ", ethReserve);
-        // console.log("ETH END BAL: ", ethBal);
-        // console.log("----------------------");
-
         _update(tokenBal, ethBal);
 
         // TODO emit Swap event
-    }
-
-    // receives ETH payments
-    function _receiveEth(uint256 amount_) internal {
-        ethBalance += amount_;
-    }
-
-    function transferEth() external payable {
-        _receiveEth(msg.value);
     }
 
     function _update(uint256 tokenBalance_, uint256 ethBalance_) private {
@@ -147,7 +119,7 @@ contract BananaswapV1Pair is BananaswapV1ERC20 {
         // TODO emit Sync event
     }
 
-    // TODO use library fxn
+    // TODO use library fxn? get rid of here?
     function _transferEth(address to_, uint256 amount_) internal {
         (bool success, bytes memory data) = to_.call{ value: amount_ }("");
         require(
@@ -156,7 +128,5 @@ contract BananaswapV1Pair is BananaswapV1ERC20 {
         );
     }
 
-    receive() external payable {
-        _receiveEth(msg.value);
-    }
+    receive() external payable {}
 }
