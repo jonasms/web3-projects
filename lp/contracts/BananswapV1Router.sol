@@ -113,6 +113,7 @@ contract BananaswapV1Router {
         address pair = BananaswapV1Library.getPair(factory, token_);
         BananaswapV1Library.transferFrom(token_, msg.sender, pair, tokensIn_);
 
+        (uint256 tokenReserve, uint256 ethReserve) = BananaswapV1Library.getReserves(factory, token_);
         uint256 ethOut = BananaswapV1Library.getAmountOutLessFee(tokensIn_, tokenReserve, ethReserve);
 
         require(ehtOut >= minEthOut_, "BananaswapV1Router::swapTokensForEth: INSUFFICIENT_ETH_OUT");
@@ -138,6 +139,18 @@ contract BananaswapV1Router {
         require(ethOut >= minEthOut_, "BananaswapV1Router::swapTokensWithFeeForETH: INSUFFICIENT_ETH_OUT");
 
         _swap(pair, uint256(0), ethOut, msg.sender);
+    }
+
+    function swapETHForTokens(address token_, uint256 minTokensOut_) external payable {
+        address pair = IBananaswapV1Factory(factory).getPair(token_);
+        BananaswapV1Library.transferEth(pair, msg.value);
+
+        (uint256 tokenReserve, uint256 ethReserve) = BananaswapV1Library.getReserves(factory, token_);
+        uint256 tokensOut = BananaswapV1Library.getAmountOutLessFee(msg.value, ethReserve, tokenReserve);
+
+        require(tokensOut >= minTokensOut_, "BananaswapV1Router::swapETHForTokens: INSUFFICIENT_TOKENS_OUT");
+
+        _swap(pair, tokensOut, uint256(0));
     }
 
     // TODO only use when token's fees are turned on?
