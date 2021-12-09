@@ -116,7 +116,7 @@ contract BananaswapV1Router {
         (uint256 tokenReserve, uint256 ethReserve) = BananaswapV1Library.getReserves(factory, token_);
         uint256 ethOut = BananaswapV1Library.getAmountOutLessFee(tokensIn_, tokenReserve, ethReserve);
 
-        require(ehtOut >= minEthOut_, "BananaswapV1Router::swapTokensForEth: INSUFFICIENT_ETH_OUT");
+        require(ethOut >= minEthOut_, "BananaswapV1Router::swapTokensForEth: INSUFFICIENT_ETH_OUT");
 
         _swap(pair, uint256(0), ethOut, msg.sender);
     }
@@ -150,7 +150,7 @@ contract BananaswapV1Router {
 
         require(tokensOut >= minTokensOut_, "BananaswapV1Router::swapETHForTokens: INSUFFICIENT_TOKENS_OUT");
 
-        _swap(pair, tokensOut, uint256(0));
+        _swap(pair, tokensOut, uint256(0), msg.sender);
     }
 
     // TODO only use when token's fees are turned on?

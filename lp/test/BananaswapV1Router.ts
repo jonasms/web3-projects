@@ -15,8 +15,7 @@ const { parseEther } = utils;
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
-const conductIco = async (_token: SotanoCoin, investors: SignerWithAddress[]) => {
-  const value = 5;
+const conductIco = async (_token: SotanoCoin, investors: SignerWithAddress[], ethIn: BigNumberType) => {
   // advance to open phase
   await _token.advancePhase();
   await _token.advancePhase();
@@ -24,10 +23,10 @@ const conductIco = async (_token: SotanoCoin, investors: SignerWithAddress[]) =>
 
   // investors buy tokens
   for (let i = 0; i < investors.length; i++) {
-    await _token.connect(investors[i]).purchase({ value: parseEther(value.toString()) });
+    await _token.connect(investors[i]).purchase({ value: ethIn });
   }
 
-  return value * investors.length;
+  return ethIn.mul(investors.length);
 };
 
 const conductLiquidityDeposits = async (
@@ -61,6 +60,19 @@ const conductLiquidityDeposits = async (
   }
 };
 
+const ONE = ethers.BigNumber.from(1);
+const TWO = ethers.BigNumber.from(2);
+
+const sqrt = (value: BigNumberType) => {
+  let z = value.add(ONE).div(TWO);
+  let y = value;
+  while (z.sub(y).isNegative()) {
+    y = z;
+    z = value.div(z).add(z).div(TWO);
+  }
+  return y;
+};
+
 const getAmountOut = (amountIn: BigNumberType, reserveIn: BigNumberType, reserveOut: BigNumberType) => {
   const amountInLessFee = amountIn.mul(99);
   const numerator = amountInLessFee.mul(reserveOut);
@@ -79,6 +91,10 @@ describe("Unit tests", function () {
   let [admin, treasury, account1, account2]: SignerWithAddress[] = [];
   let accounts: SignerWithAddress[];
 
+  const ICO_RATE = 5;
+  const icoDeposit = parseEther("10");
+  const tokenBalAtIco = icoDeposit.mul(ICO_RATE);
+
   before(async function () {
     signers = await ethers.getSigners();
     [admin, treasury, account1, account2] = signers;
@@ -95,8 +111,7 @@ describe("Unit tests", function () {
       token = <SotanoCoin>await waffle.deployContract(admin, tokenArtifact, [treasury.address]);
       //   console.log("TOKEN ADDRESS: ", token.address);
 
-      // TODO conduct ico
-      await conductIco(token, accounts);
+      await conductIco(token, accounts.slice(0, 6), icoDeposit);
 
       // deploy Factory
       const factoryArtifact: Artifact = await artifacts.readArtifact("BananaswapV1Factory");
@@ -110,8 +125,8 @@ describe("Unit tests", function () {
 
       // grant allowance via SotanoCoin
       await token.connect(account1).approve(router.address, parseEther("4"));
-      const allowance = await token.connect(account1).allowance(account1.address, router.address);
 
+      //   const allowance = await token.connect(account1).allowance(account1.address, router.address);
       //   console.log("ALLOWANCE: ", allowance.toString());
 
       // deploy Pair by adding Liquidity
@@ -149,61 +164,96 @@ describe("Unit tests", function () {
     });
 
     describe("Withdraw Liquidity", () => {
+      let tokensDeposited = parseEther("16");
+      let ethDeposited = parseEther("4");
       beforeEach(async () => {
+        // 5 accounts @ 16 : 4 each, 80 : 20 total
         // Total Liquidity:
         //  Tokens: 84 (4 + 80)
         //  ETH: 21 (1 + 20)
-        await conductLiquidityDeposits(accounts.slice(1, 11), 8, 2, router, token);
+        await conductLiquidityDeposits(accounts.slice(1, 6), 16, 4, router, token);
+        // await conductLiquidityDeposits(accounts.slice(1, 11), 8, 2, router, token);
       });
 
       // No swaps
       it("Liquidity withdrawl should result in expected tokens", async () => {
-        // const [startingTokenReserve, startingETHReserve] = await pair.getReserves();
+        let tokenReserve = parseEther("84");
+        let ethReserve = parseEther("21");
+        let tokenBalance = await token.balanceOf(account2.address);
 
-        // console.log("STARTING TOKEN RESERVE: ", startingTokenReserve.toString());
-        // console.log("STARTING ETH RESERVE: ", startingETHReserve.toString());
+        const totalSupplyBeforeWithdrawl = await pair.totalSupply();
 
-        const totalSupply = await pair.totalSupply();
-        expect(await pair.getReserves()).to.deep.equal([parseEther("84"), parseEther("21")]);
+        expect(await pair.getReserves()).to.deep.equal([tokenReserve, ethReserve]);
         // TODO place test below somehwere
         // expect(await pair.balanceOf(account1.address)).to.deep.equal(parseEther("2").sub(1000));
-        expect(await pair.balanceOf(account2.address)).to.equal(parseEther("4"));
+        let expectedLiquidityBalance = sqrt(tokensDeposited.mul(ethDeposited));
+        expect(await pair.balanceOf(account2.address)).to.equal(expectedLiquidityBalance);
 
-        // SOT balance should be 25 - 8
-        expect(await token.balanceOf(account2.address)).to.equal(parseEther("17"));
+        // SOT balance should be icoDeposit - tokensDeposited
+        expect(await token.balanceOf(account2.address)).to.equal(tokenBalAtIco.sub(tokensDeposited));
 
-        await pair.connect(account2).approve(pairAddress, parseEther("1"));
-        await router.connect(account2).withdrawLiquidity(token.address, parseEther("1"));
+        /* FIRST WITHDRAW */
+        let liquidityToWithdraw = parseEther("1");
+        await pair.connect(account2).approve(pairAddress, liquidityToWithdraw);
+        await router.connect(account2).withdrawLiquidity(token.address, liquidityToWithdraw);
 
-        expect(await pair.balanceOf(account2.address)).to.equal(parseEther("3"));
-        expect(await pair.totalSupply()).to.equal(totalSupply.sub(parseEther("1")));
-        expect(await pair.getReserves()).to.deep.equal([parseEther("82"), parseEther("20.5")]);
+        expectedLiquidityBalance = expectedLiquidityBalance.sub(liquidityToWithdraw);
+        let totLiquidityWithdrawn = liquidityToWithdraw;
+        let tokenBal = await token.balanceOf(pairAddress);
+        let ethBal = await pair.provider.getBalance(pairAddress);
+        let totalSupply = await pair.totalSupply();
+        let tokensOut = tokenBal.mul(liquidityToWithdraw).div(totalSupply);
+        let ethOut = ethBal.mul(liquidityToWithdraw).div(totalSupply);
 
-        // SOT balance should be 25 - 8 + (8 / 4) = 19
-        expect(await token.balanceOf(account2.address)).to.equal(parseEther("19"));
+        tokenReserve = tokenReserve.sub(tokensOut);
+        ethReserve = ethReserve.sub(ethOut);
 
-        await pair.connect(account2).approve(pairAddress, parseEther("3"));
-        await router.connect(account2).withdrawLiquidity(token.address, parseEther("3"));
+        expect(await pair.balanceOf(account2.address)).to.equal(expectedLiquidityBalance);
+        expect(await totalSupply).to.equal(totalSupplyBeforeWithdrawl.sub(totLiquidityWithdrawn));
+        expect(await pair.getReserves()).to.deep.equal([tokenReserve, ethReserve]);
+        // SOT balance should be startingTokenBal + tokensOut from withdrawl
+        expect(await token.balanceOf(account2.address)).to.equal(tokenBalance.add(tokensOut));
 
-        expect(await pair.balanceOf(account2.address)).to.deep.equal(parseEther("0"));
-        expect(await pair.totalSupply()).to.equal(totalSupply.sub(parseEther("4")));
-        expect(await pair.getReserves()).to.deep.equal([parseEther("76"), parseEther("19")]);
+        /* SECOND WITHDRAW */
+        liquidityToWithdraw = parseEther("3");
+        await pair.connect(account2).approve(pairAddress, liquidityToWithdraw);
+        await router.connect(account2).withdrawLiquidity(token.address, liquidityToWithdraw);
+
+        expectedLiquidityBalance = expectedLiquidityBalance.sub(liquidityToWithdraw);
+        totLiquidityWithdrawn = totLiquidityWithdrawn.add(liquidityToWithdraw);
+
+        tokenBal = await token.balanceOf(pairAddress);
+        ethBal = await pair.provider.getBalance(pairAddress);
+        totalSupply = await pair.totalSupply();
+        tokensOut = tokenBal.mul(liquidityToWithdraw).div(totalSupply);
+        ethOut = ethBal.mul(liquidityToWithdraw).div(totalSupply);
+
+        tokenReserve = tokenReserve.sub(tokensOut);
+        ethReserve = ethReserve.sub(ethOut);
+
+        expect(await pair.balanceOf(account2.address)).to.deep.equal(expectedLiquidityBalance);
+        expect(await pair.totalSupply()).to.equal(totalSupplyBeforeWithdrawl.sub(totLiquidityWithdrawn));
+        expect(await pair.getReserves()).to.deep.equal([tokenReserve, ethReserve]);
 
         // SOT balance restored to original 25
-        expect(await token.balanceOf(account2.address)).to.equal(parseEther("25"));
+        // expect(await token.balanceOf(account2.address)).to.equal(parseEther("25"));
       });
     });
 
     describe("Swap", () => {
       describe("With Token Transaction Fees", () => {
         beforeEach(async () => {
+          // 5 accounts @ 16 : 4 each, 80 : 20 total
           // Total Liquidity:
           //  Tokens: 84 (4 + 80)
           //  ETH: 21 (1 + 20)
-          await conductLiquidityDeposits(accounts.slice(0, 10), 8, 2, router, token);
+          await conductLiquidityDeposits(accounts.slice(1, 6), 16, 4, router, token);
+          //   await conductLiquidityDeposits(accounts.slice(0, 10), 8, 2, router, token);
           await token.toggleFees();
         });
         it("Token => ETH Swap", async () => {
+          console.log("MADE IT OUT OF BEFORE_EACH");
+
           /**
            * Token Reserve should increase by 8 tokens less the tsx tax
            * ETH reserve should decrease by equiv. of 8 tokens less the tsx tax
@@ -213,6 +263,7 @@ describe("Unit tests", function () {
           const tokensInAfterFee = tokensIn.sub(tokensIn.mul(2).div(100));
           const expectedEthOut = getAmountOut(tokensInAfterFee, startingTokenReserve, startingETHReserve);
           const balBeforeSwap = await account2.getBalance();
+          const startingTokenBal = await token.balanceOf(account2.address);
 
           await token.connect(account2).approve(router.address, tokensIn);
 
@@ -221,8 +272,6 @@ describe("Unit tests", function () {
             .connect(account2)
             .swapTokensWithFeeForETH(token.address, tokensIn, expectedEthOut.sub(parseEther("0.1")));
 
-          // should have 9 tokens (25 - 8 - 8)
-          const startingTokenBal = parseEther("17");
           expect(await token.balanceOf(account2.address)).to.equal(startingTokenBal.sub(tokensIn));
 
           // wallet should have (8 - 0.3%) tokens worth of ETH more than before swap
@@ -230,12 +279,9 @@ describe("Unit tests", function () {
           const balAfterSwap = await account2.getBalance();
           const [endingTokenReserve, endingETHReserve] = await pair.getReserves();
 
-          // user's ETH balance should be greater after the swap compared to before
+          // using `>=` because difficutlt to measure ETH spent on gas fees
           expect(balAfterSwap.gte(balBeforeSwap.sub(expectedEthOut))).to.equal(true);
-
-          // tokenReserves should be 8 tokens less fees greater
           expect(endingTokenReserve).to.equal(startingTokenReserve.add(tokensInAfterFee));
-          // ethReserves should be equiv to 8 tokens less fees fewer
           expect(endingETHReserve).to.equal(startingETHReserve.sub(expectedEthOut));
         });
 
