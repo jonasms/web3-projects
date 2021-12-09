@@ -87,6 +87,9 @@ describe("Unit tests", function () {
 
   describe("BananaswapV1Router", function () {
     beforeEach(async function () {
+      const pairArtifact: Artifact = await artifacts.readArtifact("BananaswapV1Pair");
+      //   console.log("BYTECODE HASH: ", utils.keccak256(pairArtifact.bytecode));
+
       // deploy Sotano Coin
       const tokenArtifact: Artifact = await artifacts.readArtifact("SotanoCoin");
       token = <SotanoCoin>await waffle.deployContract(admin, tokenArtifact, [treasury.address]);
@@ -119,10 +122,10 @@ describe("Unit tests", function () {
         });
 
       pairAddress = await factory.getPair(token.address);
+      console.log("PAIR ADDRESS: ", pairAddress);
 
       const pairContract = await ethers.getContractFactory("BananaswapV1Pair");
       pair = await pairContract.attach(pairAddress);
-      //   console.log("PAIR ADDRESS: ", pairAddress);
     });
 
     describe("Pairs", () => {

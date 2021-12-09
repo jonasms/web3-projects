@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.8.4;
 
+import "@openzeppelin/contracts/utils/Create2.sol";
 import "./libraries/BananaswapV1Library.sol";
 import "./BananaswapV1Pair.sol";
 
@@ -16,22 +17,16 @@ contract BananaswapV1Factory {
         owner = msg.sender;
     }
 
-    function createPair(address token) external returns (address pair) {
-        require(getPair[token] == address(0), "BananaswapV1Factory.createPair(): PAIR_EXISTS");
-        /**
-            TODO
-            Use CREATE2
-            1. Gas efficiency: Generates deterministic contract address that can be generated elsewhere
-                instead of using a transaction to fetch the address.
-            
-            2. Gas efficiency: Doesn't require importing the BananaswapV1Pair contract into this factory contract,
-                thus reducing gas costs on deployment significantly.
-        */
-        pair = address(new BananaswapV1Pair(token));
-        getPair[token] = pair;
+    function createPair(address token_) external returns (address pair) {
+        require(getPair[token_] == address(0), "BananaswapV1Factory.createPair(): PAIR_EXISTS");
+        bytes memory bytecode = type(BananaswapV1Pair).creationCode;
+        bytes32 salt = keccak256(abi.encodePacked(token_));
+        pair = Create2.deploy(0, salt, bytecode);
+        BananaswapV1Pair(payable(pair)).initialize(token_);
+        getPair[token_] = pair;
         pairs.push(pair);
 
-        emit PairCreated(token, pair, pairs.length);
+        emit PairCreated(token_, pair, pairs.length);
     }
 
     function setOwner(address newOwner_) external {

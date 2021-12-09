@@ -1,24 +1,26 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.8.4;
 
+import "@openzeppelin/contracts/utils/Create2.sol";
 import "../interfaces/IBananaswapV1Factory.sol";
 import "../interfaces/IBananaswapV1Pair.sol";
 
 library BananaswapV1Library {
-    // TODO remove, not being used
-    function sortTokens(address tokenA, address tokenB) internal pure returns (address token0, address token1) {
-        require(tokenA != tokenB, "BananswapLibrary.sortTokens(): IDENTICAL_ADDRESSES");
-        (token0, token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
-        require(token0 != address(0), "BananswapLibrary.sortTokens(): ZERO_ADDRESS");
+    function getPair(address factory_, address token_) internal pure returns (address pair) {
+        bytes32 salt = keccak256(abi.encodePacked(token_));
+        pair = Create2.computeAddress(
+            salt,
+            hex"d2f1bad81ece2c795c3d51dbdcb7c0d9ed51b90a33100e201553cce3b1bd454f", // IBananaswapV1Pair bytecode hash
+            factory_
+        );
     }
 
-    function getReserves(address factory, address token)
+    function getReserves(address factory_, address token_)
         internal
         view
         returns (uint256 tokenReserves, uint256 ethReserves)
     {
-        // TODO can get pair address w/out an external call using CREATE2 in factory.createPair()
-        address pair = IBananaswapV1Factory(factory).getPair(token);
+        address pair = getPair(factory_, token_);
         (tokenReserves, ethReserves) = IBananaswapV1Pair(pair).getReserves();
     }
 

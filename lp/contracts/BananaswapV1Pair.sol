@@ -17,14 +17,15 @@ contract BananaswapV1Pair is BananaswapV1ERC20 {
     uint256 ethReserve;
     bool locked;
 
-    constructor(address token_) {
-        token = token_;
-    }
-
     modifier lock() {
         locked = true;
         _;
         locked = false;
+    }
+
+    function initialize(address token_) external {
+        require(token == address(0), "BananaswapV1Pair::initialize: CALL_ONCE");
+        token = token_;
     }
 
     function getReserves() public view returns (uint256, uint256) {
