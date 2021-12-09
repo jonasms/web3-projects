@@ -105,6 +105,21 @@ contract BananaswapV1Router {
         IBananaswapV1Pair(pair_).swap(tokensOut_, ethOut_, to_);
     }
 
+    function swapTokensForETH(
+        address token_,
+        uint256 tokensIn_,
+        uint256 minEthOut_
+    ) external {
+        address pair = BananaswapV1Library.getPair(factory, token_);
+        BananaswapV1Library.transferFrom(token_, msg.sender, pair, tokensIn_);
+
+        uint256 ethOut = BananaswapV1Library.getAmountOutLessFee(tokensIn_, tokenReserve, ethReserve);
+
+        require(ehtOut >= minEthOut_, "BananaswapV1Router::swapTokensForEth: INSUFFICIENT_ETH_OUT");
+
+        _swap(pair, uint256(0), ethOut, msg.sender);
+    }
+
     // TODO only use when token's fees are turned on?
     function swapTokensWithFeeForETH(
         address token_,
