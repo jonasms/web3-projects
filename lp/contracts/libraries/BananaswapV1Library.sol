@@ -10,7 +10,7 @@ library BananaswapV1Library {
         bytes32 salt = keccak256(abi.encodePacked(token_));
         pair = Create2.computeAddress(
             salt,
-            hex"d2f1bad81ece2c795c3d51dbdcb7c0d9ed51b90a33100e201553cce3b1bd454f", // IBananaswapV1Pair bytecode hash
+            hex"d2f1bad81ece2c795c3d51dbdcb7c0d9ed51b90a33100e201553cce3b1bd454f", // BananaswapV1Pair bytecode hash
             factory_
         );
     }

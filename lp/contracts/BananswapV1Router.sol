@@ -67,7 +67,7 @@ contract BananaswapV1Router {
             minEthAmount_
         );
 
-        address pair = IBananaswapV1Factory(factory).getPair(token_);
+        address pair = BananaswapV1Library.getPair(factory, token_);
 
         // requires `msg.sender` to grant allowance to `pair` before calling `depositLiquidity()`
         BananaswapV1Library.transferFrom(token_, msg.sender, pair, tokenAmount);
@@ -86,7 +86,7 @@ contract BananaswapV1Router {
         external
         returns (uint256 tokensToWithdraw, uint256 ethToWidthraw)
     {
-        address pair = IBananaswapV1Factory(factory).getPair(token_);
+        address pair = BananaswapV1Library.getPair(factory, token_);
 
         // transfer liquidity to pair contract
         IBananaswapV1Pair(pair).transferFrom(msg.sender, pair, liquidityToWithdraw_);
@@ -111,7 +111,7 @@ contract BananaswapV1Router {
         uint256 tokensIn_,
         uint256 minEthOut_
     ) external {
-        address pair = IBananaswapV1Factory(factory).getPair(token_);
+        address pair = BananaswapV1Library.getPair(factory, token_);
         BananaswapV1Library.transferFrom(token_, msg.sender, pair, tokensIn_);
 
         (uint256 tokenReserve, uint256 ethReserve) = BananaswapV1Library.getReserves(factory, token_);

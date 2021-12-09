@@ -145,6 +145,7 @@ describe("Unit tests", function () {
       });
       // TODO test multiple deposits (tested below?)
       // TODO test bad token/eth ratio
+      // TODO test deposit with token fees on
     });
 
     describe("Withdraw Liquidity", () => {
