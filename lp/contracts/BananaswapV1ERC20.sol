@@ -3,9 +3,6 @@ pragma solidity >=0.8.4;
 
 import "./interfaces/IBananaswapV1ERC20.sol";
 
-// TODO remove
-import "hardhat/console.sol";
-
 contract BananaswapV1ERC20 is IBananaswapV1ERC20 {
     uint256 public totalSupply;
     mapping(address => uint256) public balanceOf;
@@ -24,7 +21,25 @@ contract BananaswapV1ERC20 is IBananaswapV1ERC20 {
         totalSupply -= value_;
     }
 
-    // transfer
+    function _transfer(
+        address from_,
+        address to_,
+        uint256 value_
+    ) internal {
+        balanceOf[from_] -= value_;
+        balanceOf[to_] += value_;
+    }
+
+    function transfer(address to_, uint256 value_) external returns (bool) {
+        require(to_ != address(0), "BananswapV1ERC20::transferFrom: TRANSFER_TO_ZERO_ADDRESS");
+        require(balanceOf[msg.sender] >= value_, "BananswapV1ERC20::transfer: INSUFFICIENT_FUNDS");
+
+        _transfer(msg.sender, to_, value_);
+
+        // TODO emit Transfer event
+
+        return true;
+    }
 
     // transferFrom
     function transferFrom(
@@ -36,21 +51,16 @@ contract BananaswapV1ERC20 is IBananaswapV1ERC20 {
         require(to_ != address(0), "BananswapV1ERC20::transferFrom: TRANSFER_TO_ZERO_ADDRESS");
         require(allowance[from_][to_] >= value_, "BananswapV1ERC20::transferFrom: INSUFFICIENT_ALLOWANCE");
 
-        // reduce allowance by value
         allowance[from_][to_] -= value_;
+        _transfer(from_, to_, value_);
 
-        // transfer
-        // TODO use _transfer()?
-        balanceOf[from_] -= value_;
-        balanceOf[to_] += value_;
+        // TODO emit TransferFrom event
+
         return true;
     }
 
-    // approve
     function approve(address to_, uint256 amount_) external returns (bool) {
         allowance[msg.sender][to_] = amount_;
         return true;
     }
-
-    // permit
 }

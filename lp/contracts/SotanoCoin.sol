@@ -5,9 +5,6 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-// TODO remove
-import "hardhat/console.sol";
-
 contract SotanoCoin is ERC20, Ownable {
     enum Phase {
         Closed,
@@ -201,7 +198,7 @@ contract SotanoCoin is ERC20, Ownable {
     /**
         note: only the treasury can call this method.
         note: requires sending ETH with this method execution.
-        note: requires the treasury to transfer SOT to the contract before executing withdraw().
+        note: requires the treasury to approve the tokenstransfer before executing withdraw().
      */
     function withdraw(
         address _to,

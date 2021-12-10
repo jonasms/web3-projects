@@ -6,9 +6,6 @@ import "./libraries/Math.sol";
 import "./libraries/BananaswapV1Library.sol";
 import "@openzeppelin/contracts/interfaces/IERC20.sol";
 
-// TODO remove
-import "hardhat/console.sol";
-
 contract BananaswapV1Pair is BananaswapV1ERC20 {
     uint256 public constant MIN_LIQUIDITY = 10**3;
 
@@ -32,7 +29,6 @@ contract BananaswapV1Pair is BananaswapV1ERC20 {
         return (tokenReserve, ethReserve);
     }
 
-    // TODO lock
     function mint(address to_) external lock returns (uint256 liquidity) {
         // get qty of deposits
         uint256 tokenBal = IERC20(token).balanceOf(address(this));
@@ -56,10 +52,10 @@ contract BananaswapV1Pair is BananaswapV1ERC20 {
         _mint(to_, liquidity);
 
         _update(tokenBal, _ethBal);
+
         // TODO emit Mint event
     }
 
-    // TODO lock
     function burn(address to_) external lock returns (uint256 tokenAmt, uint256 ethAmt) {
         // get liquidity burned
         uint256 liquidityToBurn = balanceOf[address(this)];
@@ -72,7 +68,7 @@ contract BananaswapV1Pair is BananaswapV1ERC20 {
         ethAmt = (ethBal * liquidityToBurn) / _totalSupply;
 
         BananaswapV1Library.transfer(token, to_, tokenAmt);
-        _transferEth(to_, ethAmt);
+        BananaswapV1Library.transferEth(to_, ethAmt);
 
         tokenBal = IERC20(token).balanceOf(address(this));
         ethBal = address(this).balance;
@@ -82,7 +78,6 @@ contract BananaswapV1Pair is BananaswapV1ERC20 {
         _burn(address(this), liquidityToBurn);
     }
 
-    // TODO lock
     function swap(
         uint256 tokensOut_,
         uint256 ethOut_,
@@ -125,15 +120,6 @@ contract BananaswapV1Pair is BananaswapV1ERC20 {
         ethReserve = ethBalance_;
 
         // TODO emit Sync event
-    }
-
-    // TODO use library fxn? get rid of here?
-    function _transferEth(address to_, uint256 amount_) internal {
-        (bool success, bytes memory data) = to_.call{ value: amount_ }("");
-        require(
-            success && (data.length == 0 || abi.decode(data, (bool))),
-            "BananaswapV1Pair::_transferEth: transfer failed"
-        );
     }
 
     receive() external payable {}

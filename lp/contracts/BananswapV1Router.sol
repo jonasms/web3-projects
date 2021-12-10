@@ -6,9 +6,6 @@ import "./interfaces/IBananaswapV1Pair.sol";
 import "./libraries/BananaswapV1Library.sol";
 import "@openzeppelin/contracts/interfaces/IERC20.sol";
 
-// TODO remove
-import "hardhat/console.sol";
-
 contract BananaswapV1Router {
     address factory;
 
@@ -51,8 +48,7 @@ contract BananaswapV1Router {
         }
     }
 
-    // TODO look into utility of to_ and deadline_
-    // TODO handle token fees
+    // TODO handle token tsx fees
     function depositLiquidity(
         address token_,
         uint256 targetTokenAmount_,
@@ -82,18 +78,23 @@ contract BananaswapV1Router {
     }
 
     // TODO handle token fees
-    function withdrawLiquidity(address token_, uint256 liquidityToWithdraw_)
-        external
-        returns (uint256 tokensToWithdraw, uint256 ethToWidthraw)
-    {
+    function withdrawLiquidity(
+        address token_,
+        uint256 liquidityToWithdraw_,
+        uint256 minTokensToWithdraw_,
+        uint256 minETHToWithdraw_
+    ) external returns (uint256 tokensWithdrawn, uint256 ethWidthrawn) {
         address pair = BananaswapV1Library.getPair(factory, token_);
 
         // transfer liquidity to pair contract
         IBananaswapV1Pair(pair).transferFrom(msg.sender, pair, liquidityToWithdraw_);
 
-        (tokensToWithdraw, ethToWidthraw) = IBananaswapV1Pair(pair).burn(msg.sender);
+        (tokensWithdrawn, ethWidthrawn) = IBananaswapV1Pair(pair).burn(msg.sender);
 
-        // TODO require amts burned >= minAmts
+        require(
+            tokensWithdrawn >= minTokensToWithdraw_ && ethWidthrawn >= minETHToWithdraw_,
+            "BananaswapV1Router::withdrawLiquidity: INSUFFICIENT_FUNDS_RETURNED"
+        );
     }
 
     function _swap(
@@ -116,14 +117,11 @@ contract BananaswapV1Router {
         (uint256 tokenReserve, uint256 ethReserve) = BananaswapV1Library.getReserves(factory, token_);
         uint256 ethOut = BananaswapV1Library.getAmountOutLessFee(tokensIn_, tokenReserve, ethReserve);
 
-        console.log("ETH OUT: ", ethOut);
-
         require(ethOut >= minEthOut_, "BananaswapV1Router::swapTokensForEth: INSUFFICIENT_ETH_OUT");
 
         _swap(pair, uint256(0), ethOut, msg.sender);
     }
 
-    // TODO only use when token's fees are turned on?
     function swapTokensWithFeeForETH(
         address token_,
         uint256 tokensIn_,
@@ -155,7 +153,6 @@ contract BananaswapV1Router {
         _swap(pair, tokensOut, uint256(0), msg.sender);
     }
 
-    // TODO only use when token's fees are turned on?
     function swapETHForTokensWithFee(address token_, uint256 minTokensOut_) external payable {
         address pair = IBananaswapV1Factory(factory).getPair(token_);
 

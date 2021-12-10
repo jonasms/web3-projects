@@ -10,7 +10,7 @@ library BananaswapV1Library {
         bytes32 salt = keccak256(abi.encodePacked(token_));
         pair = Create2.computeAddress(
             salt,
-            hex"d2f1bad81ece2c795c3d51dbdcb7c0d9ed51b90a33100e201553cce3b1bd454f", // BananaswapV1Pair bytecode hash
+            hex"04e64c39f3e01d48508c8c4f1f39f59b09903259d537a99d90c39a45943c0778", // BananaswapV1Pair bytecode hash
             factory_
         );
     }
@@ -45,7 +45,6 @@ library BananaswapV1Library {
         amountOut = (amountInLessFee * reserveOut_) / ((reserveIn_ * 100) + amountInLessFee);
     }
 
-    // TODO using?
     // given an amount out, returns the corresponding amount in required to maintain K, less fees
     function getAmountInLessFee(
         uint256 amountOut_,

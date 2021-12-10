@@ -104,7 +104,7 @@ describe("Unit tests", function () {
   describe("BananaswapV1Router", function () {
     beforeEach(async function () {
       const pairArtifact: Artifact = await artifacts.readArtifact("BananaswapV1Pair");
-      //   console.log("BYTECODE HASH: ", utils.keccak256(pairArtifact.bytecode));
+      console.log("BYTECODE HASH: ", utils.keccak256(pairArtifact.bytecode));
 
       // deploy Sotano Coin
       const tokenArtifact: Artifact = await artifacts.readArtifact("SotanoCoin");
@@ -172,7 +172,6 @@ describe("Unit tests", function () {
         //  Tokens: 84 (4 + 80)
         //  ETH: 21 (1 + 20)
         await conductLiquidityDeposits(accounts.slice(1, 6), 16, 4, router, token);
-        // await conductLiquidityDeposits(accounts.slice(1, 11), 8, 2, router, token);
       });
 
       // No swaps
@@ -195,7 +194,14 @@ describe("Unit tests", function () {
         /* FIRST WITHDRAW */
         let liquidityToWithdraw = parseEther("1");
         await pair.connect(account2).approve(pairAddress, liquidityToWithdraw);
-        await router.connect(account2).withdrawLiquidity(token.address, liquidityToWithdraw);
+        await router
+          .connect(account2)
+          .withdrawLiquidity(
+            token.address,
+            liquidityToWithdraw,
+            liquidityToWithdraw.mul(2),
+            liquidityToWithdraw.div(2),
+          );
 
         expectedLiquidityBalance = expectedLiquidityBalance.sub(liquidityToWithdraw);
         let totLiquidityWithdrawn = liquidityToWithdraw;
@@ -217,7 +223,14 @@ describe("Unit tests", function () {
         /* SECOND WITHDRAW */
         liquidityToWithdraw = parseEther("3");
         await pair.connect(account2).approve(pairAddress, liquidityToWithdraw);
-        await router.connect(account2).withdrawLiquidity(token.address, liquidityToWithdraw);
+        await router
+          .connect(account2)
+          .withdrawLiquidity(
+            token.address,
+            liquidityToWithdraw,
+            liquidityToWithdraw.mul(2),
+            liquidityToWithdraw.div(2),
+          );
 
         expectedLiquidityBalance = expectedLiquidityBalance.sub(liquidityToWithdraw);
         totLiquidityWithdrawn = totLiquidityWithdrawn.add(liquidityToWithdraw);
