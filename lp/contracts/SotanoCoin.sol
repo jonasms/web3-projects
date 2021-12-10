@@ -27,7 +27,7 @@ contract SotanoCoin is ERC20, Ownable {
     // note: 2% is equiv. to 1/50 -- divide tokens by TAX_RATE to get 2%
     uint256 private constant TAX_RATE = 50;
     address payable private treasuryAddress;
-    bool private feesEnabled;
+    bool public feesEnabled;
     mapping(Phase => PhaseDetails) private phaseToDetails;
     Phase public curPhase = Phase.Closed;
     bool private fundraisingPaused;

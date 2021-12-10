@@ -137,7 +137,7 @@ describe("Unit tests", function () {
         });
 
       pairAddress = await factory.getPair(token.address);
-      console.log("PAIR ADDRESS: ", pairAddress);
+      //   console.log("PAIR ADDRESS: ", pairAddress);
 
       const pairContract = await ethers.getContractFactory("BananaswapV1Pair");
       pair = await pairContract.attach(pairAddress);
@@ -248,12 +248,9 @@ describe("Unit tests", function () {
           //  Tokens: 84 (4 + 80)
           //  ETH: 21 (1 + 20)
           await conductLiquidityDeposits(accounts.slice(1, 6), 16, 4, router, token);
-          //   await conductLiquidityDeposits(accounts.slice(0, 10), 8, 2, router, token);
           await token.toggleFees();
         });
         it("Token => ETH Swap", async () => {
-          console.log("MADE IT OUT OF BEFORE_EACH");
-
           /**
            * Token Reserve should increase by 8 tokens less the tsx tax
            * ETH reserve should decrease by equiv. of 8 tokens less the tsx tax
@@ -324,7 +321,38 @@ describe("Unit tests", function () {
       });
 
       describe("Without Token Transfer Fees", () => {
+        beforeEach(async () => {
+          // 5 accounts @ 16 : 4 each, 80 : 20 total
+          // Total Liquidity:
+          //  Tokens: 84 (4 + 80)
+          //  ETH: 21 (1 + 20)
+          await conductLiquidityDeposits(accounts.slice(1, 6), 16, 4, router, token);
+        });
+
         it("Token => ETH Swap", async () => {
+          let [tokenReserve, ethReserve] = await pair.getReserves();
+          const tokensIn = parseEther("8");
+          const expectedEthOut = getAmountOut(tokensIn, tokenReserve, ethReserve);
+          const userWalletBalBeforeSwap = await account2.getBalance();
+          const userTokenBalBeforeSwap = await token.balanceOf(account2.address);
+
+          // approve token transfer
+          await token.connect(account2).approve(router.address, tokensIn);
+
+          // swap
+          await router
+            .connect(account2)
+            .swapTokensForETH(token.address, tokensIn, expectedEthOut.sub(parseEther("0.1")));
+
+          // test reserves
+          expect(await pair.getReserves()).to.deep.equal([tokenReserve.add(tokensIn), ethReserve.sub(expectedEthOut)]);
+          // test user's token bal
+          expect(await token.balanceOf(account2.address)).to.equal(userTokenBalBeforeSwap.sub(tokensIn));
+          // test user's eth bal
+          expect(
+            (await account2.getBalance()).gte(userWalletBalBeforeSwap.add(expectedEthOut).sub(parseEther("0.1"))),
+          ).to.equal(true);
+
           // ending token reserve should equal starting token reserve
           // expect(endingTokenReserve.sub(parseEther("8"))).to.equal(startingTokenReserve);
         });
