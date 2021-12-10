@@ -330,7 +330,7 @@ describe("Unit tests", function () {
         });
 
         it("Token => ETH Swap", async () => {
-          let [tokenReserve, ethReserve] = await pair.getReserves();
+          const [tokenReserve, ethReserve] = await pair.getReserves();
           const tokensIn = parseEther("8");
           const expectedEthOut = getAmountOut(tokensIn, tokenReserve, ethReserve);
           const userWalletBalBeforeSwap = await account2.getBalance();
@@ -352,9 +352,23 @@ describe("Unit tests", function () {
           expect(
             (await account2.getBalance()).gte(userWalletBalBeforeSwap.add(expectedEthOut).sub(parseEther("0.1"))),
           ).to.equal(true);
+        });
 
-          // ending token reserve should equal starting token reserve
-          // expect(endingTokenReserve.sub(parseEther("8"))).to.equal(startingTokenReserve);
+        it("ETH => Token Swap", async () => {
+          const [tokenReserve, ethReserve] = await pair.getReserves();
+          const ethIn = parseEther("2");
+          const expectedTokensOut = getAmountOut(ethIn, ethReserve, tokenReserve);
+          //   const userWalletBalBeforeSwap = await account2.getBalance();
+          const userTokenBalBeforeSwap = await token.balanceOf(account2.address);
+
+          await router
+            .connect(account2)
+            .swapETHForTokens(token.address, expectedTokensOut.sub(parseEther("0.1")), { value: ethIn });
+
+          // test reserves
+          expect(await pair.getReserves()).to.deep.equal([tokenReserve.sub(expectedTokensOut), ethReserve.add(ethIn)]);
+          // test user's token bal
+          expect(await token.balanceOf(account2.address)).to.equal(userTokenBalBeforeSwap.add(expectedTokensOut));
         });
       });
     });
