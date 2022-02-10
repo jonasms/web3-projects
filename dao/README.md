@@ -1,17 +1,17 @@
 # README
-This is a DAO contract that achieves the following:
-1. Allows addresses to purchase membership
-2. Allows members to vote on proposals
+This is a DAO contract with the following features:
+1. Addresses can purchase membership.
+2. Members can vote on proposals.
 3. New proposals have a 'Pending' phase in which they cannot be voted on.
 4. After which, proposals are 'Active' (can be voted on) for a standard amount of time.
-5. After a proposals voting period, it is 'Successful' if it meets quorum and have more 'for' votes than 'against' votes. The proposal is otherwise 'Defeated'.
+5. After a proposal's voting period, it is 'Successful' if it meets quorum AND has more 'for' votes than 'against' votes. The proposal is otherwise 'Defeated'.
 6. 'Successful' proposals can be executed following a grace period.
 
 ## Issues
 
 ### Issue 1
 [Medium]
-As the only way to vote is via signature, non-EOA accounts can't vote (but they can become members).
+As the only way to vote is via signature, non-EOA accounts can't vote (but they can become members) because non-EOA accounts can't create signatures.
 
 ### Issue 2
 [Low]
